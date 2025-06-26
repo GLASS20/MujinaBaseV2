@@ -16,6 +16,18 @@ This base aims to simplify this process by providing preconfigured tools to do t
 
 # Building
 
+The project is meant to be fully portable, so it should work on any windows environment by running build.bat.
+However the maven project relies on multiple online repositories, which could break the build if they were to go offline.
+
+# Editing
+
+The actual java cheat that's beeing injected is the maven project in the folder InjectableJar/InjectableJar.
+It is the only part of the project you should modify most of the time, and where you would code your modules.
+> It can't be built alone, as it depends on the other projects InjectableJar-commons and InjectableJar-processor,\
+> if you want to only build the java project, without remapping the resulting jar and embedding it in the dll, \
+> run `mvn package` in the folder InjectableJar.
+
+
 # Event system
 ## Add a new event
 
