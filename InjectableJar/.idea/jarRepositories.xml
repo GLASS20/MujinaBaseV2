@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteRepositoriesConfiguration">
+    <remote-repository>
+      <option name="id" value="local_maven_repo" />
+      <option name="name" value="local_maven_repo" />
+      <option name="url" value="file://C:\Users\lefraudeur\Desktop\RuntimeJarLoader-master 1.7.10 test\InjectableJar\InjectableJar-processor/local_maven_repo" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Central Repository" />
+      <option name="url" value="https://repo.maven.apache.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="fabricmc" />
+      <option name="name" value="fabricmc" />
+      <option name="url" value="https://maven.fabricmc.net" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="minecraft" />
+      <option name="name" value="minecraft" />
+      <option name="url" value="https://libraries.minecraft.net" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="asm" />
+      <option name="name" value="asm" />
+      <option name="url" value="https://repository.ow2.org/nexus/content/repositories/snapshots" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local_maven_repo" />
+      <option name="name" value="local_maven_repo" />
+      <option name="url" value="file://C:\Users\lefraudeur\Desktop\RuntimeJarLoader-master 1.7.10 test\InjectableJar\InjectableJar/local_maven_repo" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Maven Central repository" />
+      <option name="url" value="https://repo1.maven.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local_maven_repo" />
+      <option name="name" value="local_maven_repo" />
+      <option name="url" value="file://C:\Users\lefraudeur\Desktop\RuntimeJarLoader-master 1.7.10 test\InjectableJar\InjectableJar-commons/local_maven_repo" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="jboss.community" />
+      <option name="name" value="JBoss Community repository" />
+      <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local_maven_repo" />
+      <option name="name" value="local_maven_repo" />
+      <option name="url" value="file://C:\Users\lefraudeur\Desktop\RuntimeJarLoader-master 1.7.10 test\InjectableJar/local_maven_repo" />
+    </remote-repository>
+  </component>
+</project>
