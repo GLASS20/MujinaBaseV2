@@ -1,11 +1,13 @@
 package io.github.lefraudeur.internal.patcher;
 
 
+import org.objectweb.asm.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class ClassModifier extends Modifier
+public class ClassModifier implements NewInstanceStringable
 {
     public final String name;
     private final List<MethodModifier> modifiers;
@@ -24,7 +26,30 @@ public class ClassModifier extends Modifier
 
     public byte[] patch(byte[] originalBytes)
     {
-        return null;
+        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassReader classReader = new ClassReader(originalBytes);
+        classReader.accept(new ClassVisitor(Opcodes.ASM9, classWriter)
+        {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
+            {
+                MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
+                MethodVisitor finalVisitor = visitor;
+                for (MethodModifier modifier : modifiers)
+                {
+                    if
+                    (!(
+                        modifier.info.methodName.equals(name)
+                        && modifier.info.methodSignature.equals(descriptor)
+                        && (modifier.info.isStatic == ((access & Opcodes.ACC_STATIC) != 0))
+                    ))
+                        continue;
+                    visitor = modifier.getMethodVisitor(visitor, finalVisitor, access, name, descriptor);
+                }
+                return visitor;
+            }
+        }, ClassReader.SKIP_FRAMES);
+        return classWriter.toByteArray();
     }
 
     public void addModifier(MethodModifier modifier)

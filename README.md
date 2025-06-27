@@ -23,7 +23,7 @@ It is the only part of the project you should need to modify most of the time as
 > if you want to only build the java project, without remapping the resulting jar (source level remapping done by the annotation processor will still happen) and embedding it in the dll, \
 > run `mvn package` in the folder InjectableJar.
 
-When coding, you have to bee extra careful about which threads your methods are beeing called from,\
+When coding, you have to be extra careful about which threads your methods are beeing called from,\
 ideally you would want everything to execute on the main thread,\
 and if you have tasks you wish to perform based on the result coming from another thread, you can add them to an event queue that is flushed periodically from the game's main thread.
 
@@ -71,6 +71,7 @@ Some hints about what you might need to modify:
 And rarely, when you switch java version:
 - jdk (jdk8u442-b06) and its reference in env.bat
 - InjectableJar/pom.xml property : maven.compiler.release
+- InjectableJar/InjectableJar/src/main/java/io/github/lefraudeur/internal/EventClassLoader.java
 
 
 # Mujina ?

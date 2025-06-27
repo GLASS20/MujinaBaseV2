@@ -11,7 +11,7 @@ public class TestClass
     @EventHandler(type=ON_ENTRY,
             targetClass = "net/minecraft/client/entity/EntityClientPlayerMP",
             targetMethodName = "sendChatMessage",
-            targetMethodSignature = "(Ljava/lang/String;)V",
+            targetMethodDescriptor = "(Ljava/lang/String;)V",
             targetMethodIsStatic = false)
     public static void sendChatMessage(Canceler canceler, EntityClientPlayerMP player, String message)
     {

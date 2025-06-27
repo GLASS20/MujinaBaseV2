@@ -14,6 +14,6 @@ public @interface EventHandler
     MethodModifier.Type type();
     String targetClass();
     String targetMethodName();
-    String targetMethodSignature();
+    String targetMethodDescriptor();
     boolean targetMethodIsStatic() default false;
 }
