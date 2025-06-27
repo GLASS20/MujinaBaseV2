@@ -70,7 +70,7 @@ And rarely, when you switch java version:
 This project is very similar to my previous one [Mujina-Public](https://github.com/Lefraudeur/Mujina-Public) \
 Except this time, it focuses on the base, rather than the possible cheat modules you could do using it. \
 Unlike Mujina-Public, MujinaBaseV2 is based on RuntimeJarLoader, which starts a local webserver to host the jar, and constructs a new URLClassLoader with the jar's url. \
-Therefore, I've decided to reuse that name, credit to @lattiahirvio for coming up with the name.
+Therefore, I've decided to reuse that name, credit to  [lattiahirvio](https://github.com/lattiahirvio) for coming up with the name.
 
 It is very unlikely that the original Mujina project, which was supposed to be a fully functional client, will ever come to be, as I've decided to move away from minecraft, and so have other members.
 
