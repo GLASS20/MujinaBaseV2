@@ -20,7 +20,7 @@ However the maven project relies on multiple online repositories, which could br
 The actual java cheat that's beeing injected is the maven project in the folder InjectableJar/InjectableJar.
 It is the only part of the project you should need to modify most of the time as a user, and where you would code your modules.
 > It can't be built alone, as it depends on the other projects InjectableJar-commons and InjectableJar-processor,\
-> if you want to only build the java project, without remapping the resulting jar and embedding it in the dll, \
+> if you want to only build the java project, without remapping the resulting jar (source level remapping done by the annotation processor will still happen) and embedding it in the dll, \
 > run `mvn package` in the folder InjectableJar.
 
 When coding, you have to bee extra careful about which threads your methods are beeing called from,\
@@ -28,14 +28,21 @@ ideally you would want everything to execute on the main thread,\
 and if you have tasks you wish to perform based on the result coming from another thread, you can add them to an event queue that is flushed periodically from the game's main thread.
 
 
-
 # Event system
+The real hassle when making an injectable cheat in java, is not really adding the jar to the classpath, it usually takes only one line of code, \
+but actually setting up "events", meaning adding instructions to a game's function so that it calls one of the method in your cheat jar. \
+Otherwise you just have useless classes in the jvm that are never used. \
+The @EventHandler annotation allows you to do that. \
+Be aware that the @EventHandler annotation is first checked by the annotation processor for incoherent target method and event handler signature, and will fail the compilation in such cases. \
+It is purposefully strict to avoid having surprises at runtime.
 ## Add a new event
-The @EventHandler annotation is first checked by the annotation processor for incoherent target method and event handler signature, and will fail the compilation in such cases.
 
 
 # How can I access private fields/methods ?
-
+The project does not include any easy way to access private fields/methods of the game, \
+You will have to use java reflection api to do that \
+However be aware that the strings you will use to make your reflection calls won't be remapped automatically. \
+It is planned to include a way to remap these strings automatically in the future.
 
 
 # Working Principle
@@ -78,7 +85,14 @@ It is very unlikely that the original Mujina project, which was supposed to be a
 There is no guarrantee that this base can actually be used to build a functional cheat (not tested), or to fit any other particular purpose \
 It is purely something to play with
 
+When in the readme you encounter "it is planned to ... in the future", it only means that it's in my mind, and I know a way to do it so it's doable \
+However it doesn't mean that I will implement it soon, could be in a month, a year, a decade or never.
+
 Although the term "Injectable" is often associated with modifying minecraft in a more stealthy way, it is not the case at all for this base.\
 This base isn't built to bypass any anticheats or detections of any sort.\
 As it uses objectweb asm library to edit .class files, it might struggle working on heavily obfuscated clients, that are meant to work on the jvm, but crash other .class analysis tools.\
 The project makes use of some jvmti and jni features that might not be available on all jvms.
+
+You are free to do anything you want using this project, except obviously :
+- Redistributing while claiming ownership of the project
+- Pretending to be me (happens a lot so be careful, I communicate only through discord: lefraudeur, which is linked to my github account)
