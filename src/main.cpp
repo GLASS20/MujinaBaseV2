@@ -11,8 +11,13 @@
 #include "mappings.hpp"
 #include "InjectableJar.jar.hpp"
 #include "jvmti/jvmti.hpp"
+#include "logger/logger.hpp"
 #include <thread>
 #include <iostream>
+
+#ifndef MINECRAFT_CLASS
+# define MINECRAFT_CLASS "net/minecraft/client/Minecraft"
+#endif
 
 
 #ifdef __linux__
@@ -34,16 +39,62 @@ static bool is_uninject_key_pressed()
 #endif
 }
 
-static void mainThread(void* dll)
+static void mainFrame(const jvmti& jvmti_instance)
 {
+    jni::frame frame{}; // every local ref follow this frame object lifetime
+
+    // it is also possible to load from disk
+    maps::URL url = maps::URL::new_object(&maps::URL::constructor, maps::String::create("http://127.0.0.1:1337/InjectableJar.jar"));
+    jni::array<maps::URL> urls = jni::array<maps::URL>::create({ url });
+
+    maps::Class minecraft_class = jvmti_instance.find_loaded_class(MINECRAFT_CLASS);
+    if (!minecraft_class)
+        return logger::error("failed to get minecraft_class");
+
+    maps::ClassLoader minecraft_classloader = jvmti_instance.get_class_ClassLoader(minecraft_class);
+    if (!minecraft_classloader)
+        return logger::error("failed to get minecraft_classloader");
+
+    // here we create a new classLoader but you may want to use an existing one and call addURL on it
+    // classLoader.addURL(url);
+    // use minecraft_classloader as parent so that out cheat can access minecraft classes
+    maps::URLClassLoader classLoader = maps::URLClassLoader::new_object(&maps::URLClassLoader::constructor2, urls, minecraft_classloader);
+    if (!classLoader)
+        return logger::error("failed to create URLClassLoader");
+    logger::log("classLoader first url: " + classLoader.getURLs().to_vector()[0].toString().to_string());
+
+    // metaJNI uses env->findClass to get the jclass, however our Jar isn't in SystemClassLoader search path
+    jni::jclass_cache<maps::Main>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.Main"));
+    if (!jni::jclass_cache<maps::Main>::value)
+        return logger::error("failed to find io.github.lefraudeur.Main");
+    logger::log("loaded main class");
+
+    // Setup the classLoader trick so that minecraft classes can access the cheat classes
+    jni::jclass_cache<maps::EventClassLoader>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.internal.EventClassLoader"));
+    if (!jni::jclass_cache<maps::EventClassLoader>::value)
+        return logger::error("failed to find io.github.lefraudeur.internal.EventClassLoader");
+    maps::EventClassLoader eventClassLoader = maps::EventClassLoader::new_object(&maps::EventClassLoader::constructor, minecraft_classloader.parent.get(), (maps::ClassLoader)classLoader);
+
+    minecraft_classloader.parent = (maps::ClassLoader)eventClassLoader;
+
+    // we now call the onLoad method which should send hello in chat
+    // Console output might be broken if you used AllocConsole(), consider using another method to check whether the jar is loaded
+    maps::Main Main{};
+    Main.onLoad();
+
+
+    while (!is_uninject_key_pressed())
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    minecraft_classloader.parent = eventClassLoader.parent.get();
+}
+
+static void app()
+{
+
 #ifdef _WIN32
-/*
-    AllocConsole();
-    FILE* buff1 = nullptr, *buff2 = nullptr, *buff3 = nullptr;
-    freopen_s(&buff1, "CONOUT$", "w", stdout);
-    freopen_s(&buff2, "CONOUT$", "w", stderr);
-    freopen_s(&buff3, "CONIN$", "r", stdin);
-*/
     ix::initNetSystem();
 #elif defined(__linux__)
     display = XOpenDisplay(NULL);
@@ -57,86 +108,48 @@ static void mainThread(void* dll)
     jni::set_thread_env(env); //this is needed for every new thread that uses the lib
 
     jvmti jvmti_instance{ jvm };
-    assertm(jvmti_instance, "failed to init jvmti");
+    LOG_ERROR(jvmti_instance, "failed to init jvmti");
 
     ix::HttpServer server(1337, "127.0.0.1");
     auto res = server.listen();
-    assertm(res.first, "failed to init webserver");
+    LOG_ERROR(res.first, "failed to init webserver");
     server.setOnConnectionCallback(
         [](ix::HttpRequestPtr request,
             std::shared_ptr<ix::ConnectionState> connectionState) -> ix::HttpResponsePtr
         {
             if (request->uri == "/InjectableJar.jar")
                 return std::make_shared<ix::HttpResponse>(200, "OK",
-                ix::HttpErrorCode::Ok,
-                ix::WebSocketHttpHeaders{ {"Content-Disposition", "attachment"} },
-                std::string((char*)InjectableJar_jar.data(), InjectableJar_jar.size()));
+                    ix::HttpErrorCode::Ok,
+                    ix::WebSocketHttpHeaders{ {"Content-Disposition", "attachment"} },
+                    std::string((char*)InjectableJar_jar.data(), InjectableJar_jar.size()));
 
             return std::make_shared<ix::HttpResponse>(400, "Bad Request");
         });
     server.start();
 
-
-    {
-        jni::frame frame{}; // every local ref follow this frame object lifetime
-
-        // it is also possible to load from disk
-        maps::URL url = maps::URL::new_object(&maps::URL::constructor, maps::String::create("http://127.0.0.1:1337/InjectableJar.jar"));
-        jni::array<maps::URL> urls = jni::array<maps::URL>::create({ url });
-
-        maps::Class minecraft_class = jvmti_instance.find_loaded_class("com/ripterms/Main");
-        std::cout << "minecraft class: " << (jclass)minecraft_class << "\n";
-
-        maps::ClassLoader minecraft_classloader = jvmti_instance.get_class_ClassLoader(minecraft_class);
-        std::cout << "minecraft classloader: " << (jobject)minecraft_classloader << "\n";
-
-        // here we create a new classLoader but you may want to use an existing one and call addURL on it
-        // classLoader.addURL(url);
-        maps::URLClassLoader classLoader = maps::URLClassLoader::new_object(&maps::URLClassLoader::constructor2, urls, minecraft_classloader);
-        std::cout << classLoader.getURLs().to_vector()[0].toString().to_string() << '\n';
-        std::cout << "classLoader: " << jobject(classLoader) << '\n';
-
-        // metaJNI uses env->findClass to get the jclass, however our Jar isn't in SystemClassLoader search path
-        jni::jclass_cache<maps::Main>::value = classLoader.findClass(maps::String::create("io.github.lefraudeur.Main"));
-        std::cout << "Loaded Main class: " << jni::jclass_cache<maps::Main>::value << '\n';
-
-        // we now call the main method which should print Hello World!
-        // Console output might be broken if you used AllocConsole(), consider using another method to check whether the jar is loaded
-        maps::Main Main{};
-        Main.main(jni::array<maps::String>{nullptr});
-
-        jni::jclass_cache<maps::EventClassLoader>::value = classLoader.findClass(maps::String::create("io.github.lefraudeur.internal.EventClassLoader"));
-        maps::EventClassLoader eventClassLoader = maps::EventClassLoader::new_object(&maps::EventClassLoader::constructor, minecraft_classloader.parent.get(), (maps::ClassLoader)classLoader);
-
-        minecraft_classloader.parent = (maps::ClassLoader)eventClassLoader;
-
-
-        while (!is_uninject_key_pressed())
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-
-        minecraft_classloader.parent = eventClassLoader.parent.get();
-    }
+    mainFrame(jvmti_instance);
 
     jni::shutdown();
     jvm->DetachCurrentThread();
 
     server.stop();
 
-    std::cout << "Unloaded\n";
-
 #ifdef _WIN32
-/*
-    fclose(buff1);
-    fclose(buff2);
-    fclose(buff3);
-    FreeConsole();
-*/
     ix::uninitNetSystem();
-    FreeLibraryAndExitThread((HMODULE)dll, 0);
 #elif defined(__linux__)
     XCloseDisplay(display);
+#endif
+}
+
+static void mainThread(void* dll)
+{
+    if (!logger::init())
+        return;
+    app();
+    logger::shutdown();
+
+#ifdef _WIN32
+    FreeLibraryAndExitThread((HMODULE)dll, 0);
 #endif
     return;
 }

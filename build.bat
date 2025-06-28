@@ -6,8 +6,16 @@ CALL "%~dp0\env.bat"
 
 echo.
 echo.
-echo Building jar
+echo Cleaning
+del src\InjectableJar.jar.hpp
+del InjectableJar\InjectableJar\remapped\InjectableJar.jar
+del InjectableJar\InjectableJar\remapped\InjectableJar.jar.hpp
 cd InjectableJar
+CALL mvn clean
+
+echo.
+echo.
+echo Building jar
 CALL mvn package
 
 echo.

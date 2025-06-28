@@ -62,10 +62,10 @@ namespace maps
 	END_KLASS_DEF()
 
 	BEGIN_KLASS_DEF(Main, "io/github/lefraudeur/Main")
-		jni::method<void, "main", jni::STATIC, jni::array<String>> main{ *this };
+		jni::method<void, "onLoad", jni::STATIC> onLoad{ *this };
 	END_KLASS_DEF()
 
-	BEGIN_KLASS_DEF_EX(EventClassLoader, "io/github/lefraudeur/EventClassLoader", ClassLoader)
+	BEGIN_KLASS_DEF_EX(EventClassLoader, "io/github/lefraudeur/internal/EventClassLoader", ClassLoader)
 		jni::constructor<ClassLoader, ClassLoader> constructor{ *this };
 	END_KLASS_DEF()
 }

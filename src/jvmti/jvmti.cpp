@@ -17,7 +17,7 @@ jvmti::operator bool()
 	return jvmti_env;
 }
 
-maps::Class jvmti::find_loaded_class(const char* class_name)
+maps::Class jvmti::find_loaded_class(const char* class_name) const
 {
 	if (!jvmti_env) return nullptr;
 
@@ -50,7 +50,7 @@ maps::Class jvmti::find_loaded_class(const char* class_name)
 	return found_class;
 }
 
-std::string jvmti::get_class_signature(const maps::Class& klass)
+std::string jvmti::get_class_signature(const maps::Class& klass) const
 {
 	if (!jvmti_env || !klass) return {};
 
@@ -64,7 +64,7 @@ std::string jvmti::get_class_signature(const maps::Class& klass)
 	return signature;
 }
 
-maps::ClassLoader jvmti::get_class_ClassLoader(const maps::Class& klass)
+maps::ClassLoader jvmti::get_class_ClassLoader(const maps::Class& klass) const
 {
 	jobject classLoader = nullptr;
 	jvmti_env->GetClassLoader(klass, &classLoader);

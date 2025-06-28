@@ -13,9 +13,9 @@ public:
 	operator bool();
 
 	// warning: ressource intensive
-	maps::Class find_loaded_class(const char* class_name);
-	std::string get_class_signature(const maps::Class& klass);
-	maps::ClassLoader get_class_ClassLoader(const maps::Class& klass);
+	maps::Class find_loaded_class(const char* class_name) const;
+	std::string get_class_signature(const maps::Class& klass) const;
+	maps::ClassLoader get_class_ClassLoader(const maps::Class& klass) const;
 private:
 	jvmtiEnv* jvmti_env = nullptr;
 };

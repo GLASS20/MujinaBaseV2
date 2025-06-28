@@ -1,5 +1,7 @@
 #pragma once
 
+#include "logger/logger.hpp"
+
 #ifdef _WIN32
 	#include <Windows.h>
 #elif defined(__linux__)
@@ -15,12 +17,8 @@
 #include <cstdint>
 #include <functional>
 
-#ifdef NDEBUG
-	#define assertm(exp, msg) ;
-#else
-	#include <iostream>
-	#define assertm(exp, msg) if (!exp) { std::cout << msg << '\n'; abort(); }
-#endif
+
+#define LOG_ERROR(exp, msg) if (!exp) logger::error(msg);
 
 #define BEGIN_KLASS_DEF(unobf_klass_name, obf_klass_name) struct unobf_klass_name##_members; using unobf_klass_name = jni::klass<obf_klass_name, unobf_klass_name##_members>; struct unobf_klass_name##_members : public jni::empty_members	{ unobf_klass_name##_members(jclass owner_klass, jobject object_instance, bool is_global_ref) : jni::empty_members(owner_klass, object_instance, is_global_ref) {}
 
@@ -67,7 +65,7 @@ namespace jni
 #elif __linux__
 		pthread_key_create(&_tls_index, nullptr);
 #endif
-		assertm(_tls_index, "tls index allocation failed");
+		LOG_ERROR(_tls_index, "tls index allocation failed");
 	}
 	inline void shutdown() //needs to be called on exit, library unusable after this
 	{
@@ -147,7 +145,7 @@ namespace jni
 		jclass found = (jclass)env->NewGlobalRef(local);
 		if (!found && _custom_find_class)
 			found = (jclass)env->NewGlobalRef(_custom_find_class(klass_type::get_name()));
-		assertm(found, (const char*)(concat<"failed to find class: ", klass_type::get_name()>()));
+		LOG_ERROR(found, (const char*)(concat<"failed to find class: ", klass_type::get_name()>()));
 		{
 			std::unique_lock unique_lock{ jclass_cache<klass_type>::mutex };
 			cached = found;
@@ -440,7 +438,7 @@ namespace jni
 				if constexpr (!is_static)
 					id = get_env()->GetFieldID(m.owner_klass, get_name(), get_signature());
 			}
-			assertm(id, (const char*)(concat<"failed to find fieldID: ", get_name(), " ", get_signature()>()));
+			LOG_ERROR(id, (const char*)(concat<"failed to find fieldID: ", get_name(), " ", get_signature()>()));
 		}
 
 		field(const field& other) = delete; // make sure field won't be copied (we store a empty_members reference which must not be copied)
@@ -640,7 +638,7 @@ namespace jni
 				if constexpr (!is_static)
 					id = get_env()->GetMethodID(m.owner_klass, get_name(), get_signature());
 			}
-			assertm(id, (const char*)(concat<"failed to find methodID: ", get_name(), " ", get_signature()>()));
+			LOG_ERROR(id, (const char*)(concat<"failed to find methodID: ", get_name(), " ", get_signature()>()));
 		}
 
 		method(const method& other) = delete; // make sure method won't be copied (we store a empty_members reference which must not be copied)

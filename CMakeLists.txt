@@ -12,7 +12,7 @@ endif()
 project("JarLoader")
 
 # Add source to this project's executable.
-add_library(JarLoader SHARED "src/main.cpp" "src/jvmti/jvmti.cpp")
+add_library(JarLoader SHARED "src/main.cpp" "src/jvmti/jvmti.cpp" "src/logger/logger.cpp")
 
 target_include_directories(JarLoader PUBLIC "include" "include/jni")
 
