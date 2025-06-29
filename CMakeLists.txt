@@ -17,7 +17,7 @@ add_library(JarLoader SHARED "src/main.cpp" "src/jvmti/jvmti.cpp" "src/logger/lo
 target_include_directories(JarLoader PUBLIC "include" "include/jni")
 
 target_link_directories(JarLoader PUBLIC "lib")
-target_link_libraries(JarLoader PUBLIC "jvm" "ixwebsocket")
+target_link_libraries(JarLoader PUBLIC "jvm")
 
 set_property(TARGET JarLoader PROPERTY CXX_STANDARD 20)
 
@@ -27,7 +27,7 @@ endif()
 
 if(WIN32)
 	target_include_directories(JarLoader PUBLIC "include/jni/win32")
-	target_link_libraries(JarLoader PUBLIC "WS2_32")
+	# target_link_libraries(JarLoader PUBLIC "WS2_32")
 	# "CRYPT32" "shlwapi"
 elseif(UNIX)
 	target_include_directories(JarLoader PUBLIC "include/jni/linux")

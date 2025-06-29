@@ -61,8 +61,17 @@ namespace maps
 		jni::method<jni::array<URL>, "getURLs", jni::NOT_STATIC> getURLs{ *this };
 	END_KLASS_DEF()
 
+	BEGIN_KLASS_DEF_EX(SecureClassLoader, "java/security/SecureClassLoader", ClassLoader)
+		jni::constructor<> constructor{*this};
+	END_KLASS_DEF()
+
+	BEGIN_KLASS_DEF_EX(MemoryJarClassLoader, "io/github/lefraudeur/internal/MemoryJarClassLoader", ClassLoader)
+		jni::constructor<jni::array<jbyte>, ClassLoader> constructor{ *this };
+	END_KLASS_DEF()
+
 	BEGIN_KLASS_DEF(Main, "io/github/lefraudeur/Main")
 		jni::method<void, "onLoad", jni::STATIC> onLoad{ *this };
+		jni::method<void, "onUnload", jni::STATIC> onUnload{ *this };
 	END_KLASS_DEF()
 
 	BEGIN_KLASS_DEF_EX(EventClassLoader, "io/github/lefraudeur/internal/EventClassLoader", ClassLoader)

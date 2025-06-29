@@ -13,6 +13,6 @@ public class Main
     // warning called from c++
     public static void onUnload()
     {
-
+        Minecraft.getMinecraft().thePlayer.sendChatMessage("bye from Mujina");
     }
 }

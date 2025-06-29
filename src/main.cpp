@@ -1,5 +1,3 @@
-#include <ixwebsocket/IXNetSystem.h>
-#include <ixwebsocket/IXHttpServer.h>
 #ifdef _WIN32
     #include <Windows.h>
 #elif defined(__linux__)
@@ -10,6 +8,7 @@
 #include "meta_jni.hpp"
 #include "mappings.hpp"
 #include "InjectableJar.jar.hpp"
+#include "MemoryJarClassLoader.class.hpp"
 #include "jvmti/jvmti.hpp"
 #include "logger/logger.hpp"
 #include <thread>
@@ -43,9 +42,6 @@ static void mainFrame(const jvmti& jvmti_instance)
 {
     jni::frame frame{}; // every local ref follow this frame object lifetime
 
-    // it is also possible to load from disk
-    maps::URL url = maps::URL::new_object(&maps::URL::constructor, maps::String::create("http://127.0.0.1:1337/InjectableJar.jar"));
-    jni::array<maps::URL> urls = jni::array<maps::URL>::create({ url });
 
     maps::Class minecraft_class = jvmti_instance.find_loaded_class(MINECRAFT_CLASS);
     if (!minecraft_class)
@@ -55,13 +51,27 @@ static void mainFrame(const jvmti& jvmti_instance)
     if (!minecraft_classloader)
         return logger::error("failed to get minecraft_classloader");
 
-    // here we create a new classLoader but you may want to use an existing one and call addURL on it
-    // classLoader.addURL(url);
-    // use minecraft_classloader as parent so that out cheat can access minecraft classes
-    maps::URLClassLoader classLoader = maps::URLClassLoader::new_object(&maps::URLClassLoader::constructor2, urls, minecraft_classloader);
+
+
+    // create a new classloader, and make it define the MemoryJarClassLoader class
+    maps::SecureClassLoader secureClassLoader = maps::SecureClassLoader::new_object(&maps::SecureClassLoader::constructor);
+    if (!secureClassLoader)
+        return logger::error("failed to create secureClassLoader");
+
+    jclass MemoryJarClassLoaderClass = jni::get_env()->DefineClass("io/github/lefraudeur/internal/MemoryJarClassLoader", secureClassLoader, (jbyte*)MemoryJarClassLoader_class.data(), MemoryJarClassLoader_class.size());
+    if (!MemoryJarClassLoaderClass)
+        return logger::error("failed to define MemoryJarClassLoader class");
+
+    // tell MetaJni the MemoryJarClassLoader jclass it needs to use
+    jni::jclass_cache<maps::MemoryJarClassLoader>::value = MemoryJarClassLoaderClass;
+
+
+
+
+    jni::array<jbyte> InjectableJarJbyteArray = jni::array<jbyte>::create(std::vector<jbyte>(InjectableJar_jar.begin(), InjectableJar_jar.end()));
+    maps::MemoryJarClassLoader classLoader = maps::MemoryJarClassLoader::new_object(&maps::MemoryJarClassLoader::constructor, InjectableJarJbyteArray, (maps::ClassLoader)minecraft_classloader);
     if (!classLoader)
-        return logger::error("failed to create URLClassLoader");
-    logger::log("classLoader first url: " + classLoader.getURLs().to_vector()[0].toString().to_string());
+        return logger::error("failed to create memoryJarClassLoader");
 
     // metaJNI uses env->findClass to get the jclass, however our Jar isn't in SystemClassLoader search path
     jni::jclass_cache<maps::Main>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.Main"));
@@ -77,16 +87,19 @@ static void mainFrame(const jvmti& jvmti_instance)
 
     minecraft_classloader.parent = (maps::ClassLoader)eventClassLoader;
 
+    // TODO: transformer
+
     // we now call the onLoad method which should send hello in chat
     // Console output might be broken if you used AllocConsole(), consider using another method to check whether the jar is loaded
     maps::Main Main{};
     Main.onLoad();
 
-
     while (!is_uninject_key_pressed())
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
+    Main.onUnload();
 
     minecraft_classloader.parent = eventClassLoader.parent.get();
 }
@@ -95,7 +108,7 @@ static void app()
 {
 
 #ifdef _WIN32
-    ix::initNetSystem();
+    
 #elif defined(__linux__)
     display = XOpenDisplay(NULL);
 #endif
@@ -108,34 +121,14 @@ static void app()
     jni::set_thread_env(env); //this is needed for every new thread that uses the lib
 
     jvmti jvmti_instance{ jvm };
-    LOG_ERROR(jvmti_instance, "failed to init jvmti");
-
-    ix::HttpServer server(1337, "127.0.0.1");
-    auto res = server.listen();
-    LOG_ERROR(res.first, "failed to init webserver");
-    server.setOnConnectionCallback(
-        [](ix::HttpRequestPtr request,
-            std::shared_ptr<ix::ConnectionState> connectionState) -> ix::HttpResponsePtr
-        {
-            if (request->uri == "/InjectableJar.jar")
-                return std::make_shared<ix::HttpResponse>(200, "OK",
-                    ix::HttpErrorCode::Ok,
-                    ix::WebSocketHttpHeaders{ {"Content-Disposition", "attachment"} },
-                    std::string((char*)InjectableJar_jar.data(), InjectableJar_jar.size()));
-
-            return std::make_shared<ix::HttpResponse>(400, "Bad Request");
-        });
-    server.start();
-
-    mainFrame(jvmti_instance);
+    if (jvmti_instance)
+        mainFrame(jvmti_instance);
 
     jni::shutdown();
     jvm->DetachCurrentThread();
 
-    server.stop();
-
 #ifdef _WIN32
-    ix::uninitNetSystem();
+
 #elif defined(__linux__)
     XCloseDisplay(display);
 #endif
@@ -146,6 +139,7 @@ static void mainThread(void* dll)
     if (!logger::init())
         return;
     app();
+    logger::log("unloaded");
     logger::shutdown();
 
 #ifdef _WIN32
