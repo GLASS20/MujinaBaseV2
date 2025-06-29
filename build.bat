@@ -13,6 +13,7 @@ del InjectableJar\InjectableJar\remapped\InjectableJar.jar.hpp
 cd InjectableJar
 CALL mvn clean
 
+
 echo.
 echo.
 echo Building jar

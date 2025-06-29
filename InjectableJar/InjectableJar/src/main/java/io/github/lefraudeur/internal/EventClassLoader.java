@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 
 public class EventClassLoader extends ClassLoader
 {
-    private ClassLoader newClassLoader;
+    private final ClassLoader newClassLoader;
 
     public EventClassLoader(ClassLoader parent, ClassLoader newClassloader)
     {
