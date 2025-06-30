@@ -31,14 +31,14 @@ public class EntryMethodModifier extends MethodModifier
             {
                 // new Canceler()
                 String CancelerClassName = Canceler.class.getName().replace('.', '/');
-                finalVisitor.visitTypeInsn(Opcodes.NEW, CancelerClassName);
-                finalVisitor.visitTypeInsn(Opcodes.DUP, CancelerClassName);
-                finalVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, CancelerClassName, "<init>", "()V", false);
+                mv.visitTypeInsn(Opcodes.NEW, CancelerClassName);
+                mv.visitInsn(Opcodes.DUP);
+                mv.visitMethodInsn(Opcodes.INVOKESPECIAL, CancelerClassName, "<init>", "()V", false);
 
 
                 // push method this + method parameters on stack
                 if (!info.isStatic)
-                    finalVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                    mv.visitVarInsn(Opcodes.ALOAD, 0);
 
                 Method method = new Method(info.methodName, info.methodSignature);
                 org.objectweb.asm.Type[] arguments = method.getArgumentTypes();
@@ -52,22 +52,22 @@ public class EntryMethodModifier extends MethodModifier
                         case org.objectweb.asm.Type.BYTE:
                         case org.objectweb.asm.Type.SHORT:
                         case org.objectweb.asm.Type.INT:
-                            finalVisitor.visitVarInsn(Opcodes.ILOAD, i);
+                            mv.visitVarInsn(Opcodes.ILOAD, i);
                             break;
                         case org.objectweb.asm.Type.FLOAT:
-                            finalVisitor.visitVarInsn(Opcodes.FLOAD, i);
+                            mv.visitVarInsn(Opcodes.FLOAD, i);
                             break;
                         case org.objectweb.asm.Type.LONG:
-                            finalVisitor.visitVarInsn(Opcodes.LLOAD, i);
+                            mv.visitVarInsn(Opcodes.LLOAD, i);
                             ++i;
                             break;
                         case org.objectweb.asm.Type.DOUBLE:
-                            finalVisitor.visitVarInsn(Opcodes.DLOAD, i);
+                            mv.visitVarInsn(Opcodes.DLOAD, i);
                             ++i;
                             break;
                         case org.objectweb.asm.Type.ARRAY:
                         case org.objectweb.asm.Type.OBJECT:
-                            finalVisitor.visitVarInsn(Opcodes.ALOAD, i);
+                            mv.visitVarInsn(Opcodes.ALOAD, i);
                             break;
                         default:
                             throw new RuntimeException("incorrect argument Type or not implemented");
@@ -75,9 +75,9 @@ public class EntryMethodModifier extends MethodModifier
                 }
 
                 // call event handler
-                finalVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, info.eventMethodClass, info.eventMethodName, info.eventMethodSignature, false);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, info.eventMethodClass, info.eventMethodName, info.eventMethodSignature, false);
                 if (method.getReturnType().getSort() != org.objectweb.asm.Type.VOID)
-                    finalVisitor.visitInsn(Opcodes.POP);
+                    mv.visitInsn(Opcodes.POP);
             }
         };
     }

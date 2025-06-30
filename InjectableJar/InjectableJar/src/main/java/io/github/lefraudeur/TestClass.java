@@ -15,6 +15,6 @@ public class TestClass
             targetMethodIsStatic = false)
     public static void sendChatMessage(Canceler canceler, EntityClientPlayerMP player, String message)
     {
-        System.out.println("test success");
+        player.jump();
     }
 }

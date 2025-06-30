@@ -77,4 +77,14 @@ namespace maps
 	BEGIN_KLASS_DEF_EX(EventClassLoader, "io/github/lefraudeur/internal/EventClassLoader", ClassLoader)
 		jni::constructor<ClassLoader, ClassLoader> constructor{ *this };
 	END_KLASS_DEF()
+
+	BEGIN_KLASS_DEF(ClassModifier, "io/github/lefraudeur/internal/patcher/ClassModifier")
+		jni::method<jni::array<jbyte>, "patch", jni::NOT_STATIC, jni::array<jbyte>> patch{ *this };
+	END_KLASS_DEF()
+
+	BEGIN_KLASS_DEF(PatcherHelper, "io/github/lefraudeur/internal/patcher/PatcherHelper")
+		jni::method<jboolean, "init", jni::STATIC> init{ *this };
+		jni::method<jni::array<Class>, "getClassesToTransform", jni::STATIC> getClassesToTransform{ *this };
+		jni::method<ClassModifier, "getClassModifier", jni::STATIC, Class> getClassModifier{ *this };
+	END_KLASS_DEF()
 }

@@ -11,6 +11,7 @@
 #include "MemoryJarClassLoader.class.hpp"
 #include "jvmti/jvmti.hpp"
 #include "logger/logger.hpp"
+#include "transformer/transformer.hpp"
 #include <thread>
 #include <iostream>
 
@@ -73,6 +74,8 @@ static void mainFrame(const jvmti& jvmti_instance)
     if (!classLoader)
         return logger::error("failed to create memoryJarClassLoader");
 
+    // TODO: Make meta jni custom findClass that uses the classLoader we just created
+
     // metaJNI uses env->findClass to get the jclass, however our Jar isn't in SystemClassLoader search path
     jni::jclass_cache<maps::Main>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.Main"));
     if (!jni::jclass_cache<maps::Main>::value)
@@ -87,7 +90,12 @@ static void mainFrame(const jvmti& jvmti_instance)
 
     minecraft_classloader.parent = (maps::ClassLoader)eventClassLoader;
 
-    // TODO: transformer
+    if (!transformer::init(jvmti_instance, classLoader))
+    {
+        minecraft_classloader.parent = eventClassLoader.parent.get();
+        return;
+    }
+
 
     // we now call the onLoad method which should send hello in chat
     // Console output might be broken if you used AllocConsole(), consider using another method to check whether the jar is loaded
@@ -100,6 +108,8 @@ static void mainFrame(const jvmti& jvmti_instance)
     }
 
     Main.onUnload();
+
+    transformer::shutdown(jvmti_instance);
 
     minecraft_classloader.parent = eventClassLoader.parent.get();
 }
@@ -122,7 +132,18 @@ static void app()
 
     jvmti jvmti_instance{ jvm };
     if (jvmti_instance)
+    {
         mainFrame(jvmti_instance);
+        // use after jni::shutdown but normal
+        jni::frame f{};
+        jvmti_instance.get_env()->ForceGarbageCollection();
+        jclass test = jvmti_instance.find_loaded_class("io/github/lefraudeur/Main");
+        if (!test)
+            logger::log("successfully unloaded classes");
+        else
+            logger::log("failed to unload classes");
+    }
+
 
     jni::shutdown();
     jvm->DetachCurrentThread();

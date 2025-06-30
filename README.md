@@ -1,31 +1,38 @@
-﻿# MujinaBaseV2
+# MujinaBaseV2
 
 An injectable java cheat base for minecraft with a cool event system, loaded with C++, that can remap to work on multiple clients such as vanilla, forge and lunar client
 
 The base is for 1.7.10 minecraft, however it can be adapted to work on any minecraft version. \
 It works only on windows at the moment, however it could be modified to work on linux fairly easily \
-(replace building scripts, and add the linux version of ixwebsockets).
+(replace building scripts, and add jvm.so).
 
 It's pretty easy to add a jar to your application class path, the jvm provides many interfaces to do that.\
 However when working with minecraft, the game class/fields/methods names might be different from the ones you used to build the jar you wish to load, which requires you to remap the jar first.\
 This base aims to simplify this process by providing preconfigured tools to do that.
 
+It also allows you to setup events easily : [Event system](#event-system)
 # Building
 
 The project is meant to be fully portable, so it should work on any windows environment by running `build.bat`, without manually installing dependencies or building tools.\
 However the maven project relies on multiple online repositories, which could break the build if they were to go offline.
 
+Since you build using build.bat and not with your IDE, make sure you save all the files you edited with your IDE first.
+
 # Using the base
 
-The actual java cheat that's beeing injected is the maven project in the folder InjectableJar/InjectableJar.
-It is the only part of the project you should need to modify most of the time as a user, and where you would code your modules.
-> It can't be built alone, as it depends on the other projects InjectableJar-commons and InjectableJar-processor,\
+The actual java cheat that's beeing injected is the maven project in the folder [InjectableJar/InjectableJar](InjectableJar/InjectableJar).\
+It is the only part of the project you should need to modify most of the time as a user, and where you would code your modules.\
+In this project, Minecraft renamed jar is included as a dependency, and you can refer Minecraft classes.
+> It can't be built alone, as it depends on the other projects InjectableJar-commons and InjectableJar-processor, so make sure to open your IDE in the parent maven project\
 > if you want to only build the java project, without remapping the resulting jar (source level remapping done by the annotation processor will still happen) and embedding it in the dll, \
 > run `mvn package` in the folder InjectableJar.
 
+I personally open intellij IDEA in the [InjectableJar](InjectableJar) folder, but you should be able to use any IDE.\
+Just make sure to configure it to use the right jdk version (java 8)
+
 When coding, you have to be extra careful about which threads your methods are beeing called from,\
-ideally you would want everything to execute on the main thread,\
-and if you have tasks you wish to perform based on the result coming from another thread, you can add them to an event queue that is flushed periodically from the game's main thread.
+ideally you would want everything to execute on the game's main thread,\
+and if you have tasks you wish to perform based on the result coming from another thread, you can add them to an event queue that is flushed periodically from the game's main thread. ( a classic async architecture basically )
 
 
 # Event system
@@ -36,6 +43,13 @@ The @EventHandler annotation allows you to do that. \
 Be aware that the @EventHandler annotation is first checked by the annotation processor for incoherent target method and event handler signature, and will fail the compilation in such cases. \
 It is purposefully strict to avoid having surprises at runtime.
 ## Add a new event
+
+# How do I call the original unmodified method ?
+At the moment, there is no way to call the original method that won't trigger the event. \
+So do not call the modified method from its event handler, otherwise you will end up in an infinite loop. \
+The possible workarounds would be :
+- Make a boolean that would tell your handler to immediatly return without doing anything (won't always work, not reliable)
+- Reimplement the original method yourself (takes a lot of time, and will need to use reflection for private fields/methods)
 
 
 # How can I access private fields/methods ?
@@ -50,7 +64,7 @@ It is planned to include a way to remap these strings automatically in the futur
 ## What happens on inject
 
 
-# How do I add a new version ?
+# How do I adapt the project to work with another minecraft version ?
 I've tried my best to explain what this project does in the previous sections, make sure to read them carefully, as well as check out the external references.
 
 Some hints about what you might need to modify:
@@ -70,9 +84,19 @@ Some hints about what you might need to modify:
 
 And rarely, when you switch java version:
 - jdk (jdk8u442-b06) and its reference in env.bat
-- InjectableJar/pom.xml property : maven.compiler.release
+- InjectableJar/pom.xml property : maven.compiler.release (java version has to be lower or equal to the one of the jvm you inject to)
 - InjectableJar/InjectableJar/src/main/java/io/github/lefraudeur/internal/EventClassLoader.java
+- asm library version and api version (Opcodes.ASMX) (shouldn't have to be updated, unless there is a new major java version)
 
+# How do I add a dependency to my jar
+Most of the time you should edit InjectableJar/InjectableJar/pom.xml `<dependencies>` \
+as well as add it to the shade plugin `<includes>`, so that it's embedded in InjectableJar
+
+If you add a dependency, that is already in the game classpath, then you don't have to shade it in \
+If you do decide to add the dependency in the shaded jar, it won't override the one already in the game, \
+so you might have some problems when the dependency version used in InjectableJar, is different from the version used in game (I got this issue with the asm library) \
+To fix that issue, you can modify MemoryJarClassLoader, so that it doesn't delegate the class loading process to its parent (the game classloader),
+just like it's done for the asm dependency : [MemoryJarClassLoader.java](memory-jar-classloader/src/main/java/io/github/lefraudeur/internal/MemoryJarClassLoader.java)
 
 # Mujina ?
 This project is very similar to my previous one [Mujina-Public](https://github.com/Lefraudeur/Mujina-Public) \

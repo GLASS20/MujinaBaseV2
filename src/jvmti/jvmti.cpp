@@ -70,3 +70,8 @@ maps::ClassLoader jvmti::get_class_ClassLoader(const maps::Class& klass) const
 	jvmti_env->GetClassLoader(klass, &classLoader);
 	return maps::ClassLoader(classLoader);
 }
+
+jvmtiEnv* jvmti::get_env() const
+{
+	return jvmti_env;
+}

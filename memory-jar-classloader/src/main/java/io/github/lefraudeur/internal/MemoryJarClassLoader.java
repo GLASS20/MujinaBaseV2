@@ -23,6 +23,21 @@ public class MemoryJarClassLoader extends ClassLoader
     }
 
     @Override
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
+    {
+        // make sure we use our own asm library, not the one already in game
+        if (name.startsWith("org.objectweb.asm"))
+        {
+            Class<?> alreadyLoaded = findLoadedClass(name);
+            if (alreadyLoaded != null)
+                return alreadyLoaded;
+
+            return findClass(name);
+        }
+        return super.loadClass(name, resolve);
+    }
+
+    @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException
     {
         String path = name.replace('.', '/');
@@ -39,7 +54,7 @@ public class MemoryJarClassLoader extends ClassLoader
         InputStream stream = super.getResourceAsStream(name);
         if (stream != null)
             return stream;
-        String path = name.replace('.', '/');
+        String path = "resources/" + name.replace('.', '/');
         byte[] extracted = extract(name);
         if (extracted == null)
             return null;
