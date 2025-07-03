@@ -3,7 +3,7 @@ package io.github.lefraudeur.internal;
 import io.github.lefraudeur.internal.patcher.ClassModifier;
 import io.github.lefraudeur.internal.patcher.EntryMethodModifier;
 import io.github.lefraudeur.internal.patcher.MethodModifier;
-import io.github.lefraudeur.internal.patcher.ReturnMethodModifier;
+import io.github.lefraudeur.internal.patcher.ReturnThrowMethodModifier;
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.extras.MappingTreeRemapper;
 import net.fabricmc.mappingio.format.MappingFormat;
@@ -107,12 +107,12 @@ public class EventHandlerProcessor extends AbstractProcessor
             String eventHandlerMethodName = eventHandler.getSimpleName().toString();
             String remappedTargetClass = treeRemapper.map(annotation.targetClass());
             String remappedTargetMethod = treeRemapper.mapMethodName(annotation.targetClass(), annotation.targetMethodName(), annotation.targetMethodDescriptor());
-            String remappedTargetMethodSignature = treeRemapper.mapMethodDesc(annotation.targetMethodDescriptor());
+            String remappedTargetMethodDescriptor = treeRemapper.mapMethodDesc(annotation.targetMethodDescriptor());
 
             ClassModifier classModifier = classModifierMap.computeIfAbsent(annotation.targetClass(), k -> new ClassModifier(remappedTargetClass));
 
             MethodModifier.MethodModifierInfo info = new MethodModifier.MethodModifierInfo(
-                    remappedTargetMethod, remappedTargetMethodSignature,
+                    remappedTargetMethod, remappedTargetMethodDescriptor,
                     eventHandlerClassName, eventHandlerMethodName, executableElementDescriptor,
                     annotation.targetMethodIsStatic());
 
@@ -121,8 +121,8 @@ public class EventHandlerProcessor extends AbstractProcessor
                 case ON_ENTRY:
                     classModifier.addModifier(new EntryMethodModifier(info));
                     break;
-                case ON_RETURN:
-                    classModifier.addModifier(new ReturnMethodModifier(info));
+                case ON_RETURN_THROW:
+                    classModifier.addModifier(new ReturnThrowMethodModifier(info));
                     break;
             }
         }
@@ -181,15 +181,23 @@ public class EventHandlerProcessor extends AbstractProcessor
 
     private String getExpectedDescriptor(EventHandler annotation) throws Exception
     {
-        if (annotation.type() == MethodModifier.Type.ON_ENTRY || annotation.type() == MethodModifier.Type.ON_RETURN)
-        {
-            MethodType targetMethodType = MethodType.fromMethodDescriptorString(annotation.targetMethodDescriptor(), EventHandlerProcessor.class.getClassLoader());
+        MethodType targetMethodType = MethodType.fromMethodDescriptorString(annotation.targetMethodDescriptor(), EventHandlerProcessor.class.getClassLoader());
+        Class<?> returnType = targetMethodType.returnType();
 
+        if (annotation.type() == MethodModifier.Type.ON_ENTRY || annotation.type() == MethodModifier.Type.ON_RETURN_THROW)
+        {
             if (!annotation.targetMethodIsStatic())
                 targetMethodType = targetMethodType.insertParameterTypes(0, Class.forName(annotation.targetClass().replace('/', '.')));
 
             if (annotation.type() == MethodModifier.Type.ON_ENTRY)
                 targetMethodType = targetMethodType.insertParameterTypes(0, Canceler.class);
+
+            if (annotation.type() == MethodModifier.Type.ON_RETURN_THROW)
+            {
+                targetMethodType = targetMethodType.insertParameterTypes(0, Thrower.class);
+                if (returnType != void.class)
+                    targetMethodType = targetMethodType.insertParameterTypes(0, returnType);
+            }
 
             return targetMethodType.toMethodDescriptorString();
         }

@@ -34,21 +34,22 @@ public class ClassModifier implements NewInstanceStringable
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions)
             {
                 MethodVisitor visitor = super.visitMethod(access, name, descriptor, signature, exceptions);
-                MethodVisitor finalVisitor = visitor;
                 for (MethodModifier modifier : modifiers)
                 {
                     if
                     (!(
                         modifier.info.methodName.equals(name)
-                        && modifier.info.methodSignature.equals(descriptor)
+                        && modifier.info.methodDescriptor.equals(descriptor)
                         && (modifier.info.isStatic == ((access & Opcodes.ACC_STATIC) != 0))
                     ))
                         continue;
-                    visitor = modifier.getMethodVisitor(visitor, finalVisitor, access, name, descriptor);
+                    MethodVisitor newVisitor = modifier.getMethodVisitor(visitor, access, name, descriptor);
+                    if (newVisitor == null) continue;
+                    visitor = newVisitor;
                 }
                 return visitor;
             }
-        }, ClassReader.SKIP_FRAMES);
+        }, ClassReader.SKIP_FRAMES); // skip frames as we are going to recompute them anyway, could be an issue
         return classWriter.toByteArray();
     }
 

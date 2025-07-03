@@ -68,7 +68,9 @@ static void mainFrame(const jvmti& jvmti_instance)
 
 
 
-
+    // here we create the MemoryJarClassLoader that will define InjectableJar, you can replace this by a classic URLClassLoader to load from a file instead.
+    // warning: MemoryJarClassLoader also changes the delegation model for the asm library, so you might have issues doing that 
+    // (you could code a new ClassLoader that extends URLClassLoader to fix it)
     jni::array<jbyte> InjectableJarJbyteArray = jni::array<jbyte>::create(std::vector<jbyte>(InjectableJar_jar.begin(), InjectableJar_jar.end()));
     maps::MemoryJarClassLoader classLoader = maps::MemoryJarClassLoader::new_object(&maps::MemoryJarClassLoader::constructor, InjectableJarJbyteArray, (maps::ClassLoader)minecraft_classloader);
     if (!classLoader)
@@ -98,7 +100,6 @@ static void mainFrame(const jvmti& jvmti_instance)
 
 
     // we now call the onLoad method which should send hello in chat
-    // Console output might be broken if you used AllocConsole(), consider using another method to check whether the jar is loaded
     maps::Main Main{};
     Main.onLoad();
 
@@ -122,27 +123,25 @@ static void app()
 #elif defined(__linux__)
     display = XOpenDisplay(NULL);
 #endif
-
+    jint result = 0;
     JavaVM* jvm = nullptr;
-    JNI_GetCreatedJavaVMs(&jvm, 1, nullptr);
+    result = JNI_GetCreatedJavaVMs(&jvm, 1, nullptr);
+    if (result != JNI_OK || !jvm)
+        return logger::error("failed to get JavaVM*");
     JNIEnv* env = nullptr;
-    jvm->AttachCurrentThread((void**)&env, nullptr);
-    jni::init();
-    jni::set_thread_env(env); //this is needed for every new thread that uses the lib
+    result = jvm->AttachCurrentThread((void**)&env, nullptr);
+    if (result != JNI_OK || !env)
+        return logger::error("failed to get JNIEnv*");
+    if (!jni::init())
+    {
+        jvm->DetachCurrentThread();
+        return;
+    }
+    jni::set_thread_env(env); //this is needed for every new thread that uses MetaJNI
 
     jvmti jvmti_instance{ jvm };
     if (jvmti_instance)
-    {
         mainFrame(jvmti_instance);
-        // use after jni::shutdown but normal
-        jni::frame f{};
-        jvmti_instance.get_env()->ForceGarbageCollection();
-        jclass test = jvmti_instance.find_loaded_class("io/github/lefraudeur/Main");
-        if (!test)
-            logger::log("successfully unloaded classes");
-        else
-            logger::log("failed to unload classes");
-    }
 
 
     jni::shutdown();

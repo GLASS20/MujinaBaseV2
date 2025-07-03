@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// bunch of static methods called by c++ transformer
 public class PatcherHelper
 {
     private static Class<?>[] classesToTransform = null;

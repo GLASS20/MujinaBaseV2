@@ -57,15 +57,18 @@ namespace jni
 #endif
 	}
 
-	inline void init()
+	inline bool init()
 	{
-		if (_tls_index) return;
+		if (_tls_index) return true;
 #ifdef _WIN32
 		_tls_index = TlsAlloc();
 #elif __linux__
 		pthread_key_create(&_tls_index, nullptr);
 #endif
 		LOG_ERROR(_tls_index, "tls index allocation failed");
+		if (!_tls_index)
+			return false;
+		return true;
 	}
 	inline void shutdown() //needs to be called on exit, library unusable after this
 	{

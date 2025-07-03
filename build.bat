@@ -1,9 +1,9 @@
 @echo off
-:start
 
 echo Setting up environment
 CALL "%~dp0\env.bat"
 
+:start
 echo.
 echo.
 echo Cleaning
