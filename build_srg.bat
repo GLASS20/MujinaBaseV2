@@ -4,6 +4,7 @@ echo Setting up environment
 CALL "%~dp0\env.bat"
 
 :start
+
 echo.
 echo.
 echo Cleaning
@@ -23,7 +24,7 @@ echo.
 echo.
 echo Remapping Jar
 cd InjectableJar
-CALL remap.bat
+CALL remap_srg.bat
 cd remapped
 
 echo.
@@ -36,7 +37,7 @@ echo.
 echo.
 echo Building dll
 cd ..\..\..\
-cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMINECRAFT_CLASS="net/minecraft/client/Minecraft"
 cmake --build build
 
 echo.

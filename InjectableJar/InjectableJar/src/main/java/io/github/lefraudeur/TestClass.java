@@ -19,7 +19,7 @@ public class TestClass
             targetMethodIsStatic = false)
     public static void sendChatMessage(Canceler canceler, EntityClientPlayerMP player, String message)
     {
-        player.jump();
+        System.out.println("sendChatMessage on entry succeeded");
     }
 
     @EventHandler(type=ON_RETURN_THROW,
@@ -28,7 +28,7 @@ public class TestClass
             targetMethodDescriptor = "(Ljava/lang/String;)V")
     public static void sendChatMessage(Thrower thrower, EntityClientPlayerMP player, String message)
     {
-        player.jump();
+        System.out.println("sendChatMessage on return succeeded");
     }
 
     @EventHandler(type=ON_ENTRY,
@@ -37,7 +37,9 @@ public class TestClass
             targetMethodDescriptor = "(Lnet/minecraft/world/IBlockAccess;IIII)Z")
     public static boolean shouldSideBeRendered(Canceler canceler, Block thisBlock, IBlockAccess p_149646_1_, int p_149646_2_, int p_149646_3_, int p_149646_4_, int p_149646_5_)
     {
-        canceler.cancel = false;
+        canceler.cancel = true;
+        if (thisBlock instanceof net.minecraft.block.BlockOre)
+            return true;
         return false;
     }
 }

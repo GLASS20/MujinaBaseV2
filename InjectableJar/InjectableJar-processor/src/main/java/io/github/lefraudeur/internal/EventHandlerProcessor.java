@@ -101,6 +101,7 @@ public class EventHandlerProcessor extends AbstractProcessor
 
             String executableElementDescriptor = getExecutableElementDescriptor(eventHandler);
             checkAnnotationValidity(annotation, executableElementDescriptor);
+            String remappedExecutableElementDescriptor = treeRemapper.mapMethodDesc(executableElementDescriptor);
 
             String eventHandlerClassName = ((TypeElement)eventHandler.getEnclosingElement()).getQualifiedName().toString();
             eventHandlerClassName = eventHandlerClassName.replace('.', '/');
@@ -113,7 +114,7 @@ public class EventHandlerProcessor extends AbstractProcessor
 
             MethodModifier.MethodModifierInfo info = new MethodModifier.MethodModifierInfo(
                     remappedTargetMethod, remappedTargetMethodDescriptor,
-                    eventHandlerClassName, eventHandlerMethodName, executableElementDescriptor,
+                    eventHandlerClassName, eventHandlerMethodName, remappedExecutableElementDescriptor,
                     annotation.targetMethodIsStatic());
 
             switch (annotation.type())

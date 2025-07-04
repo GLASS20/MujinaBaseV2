@@ -28,11 +28,14 @@ public class MemoryJarClassLoader extends ClassLoader
         // make sure we use our own asm library, not the one already in game
         if (name.startsWith("org.objectweb.asm"))
         {
-            Class<?> alreadyLoaded = findLoadedClass(name);
-            if (alreadyLoaded != null)
-                return alreadyLoaded;
+            Class<?> found = findLoadedClass(name);
+            if (found == null)
+                found = findClass(name);
 
-            return findClass(name);
+            if (resolve)
+                resolveClass(found);
+
+            return found;
         }
         return super.loadClass(name, resolve);
     }

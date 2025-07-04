@@ -11,8 +11,12 @@ endif()
 
 project("JarLoader")
 
+set(MINECRAFT_CLASS "net/minecraft/client/Minecraft" CACHE STRING "Minecraft Class Name")
+
 # Add source to this project's executable.
 add_library(JarLoader SHARED "src/main.cpp" "src/jvmti/jvmti.cpp" "src/logger/logger.cpp" "src/transformer/transformer.cpp")
+
+target_compile_definitions(JarLoader PUBLIC MINECRAFT_CLASS="${MINECRAFT_CLASS}")
 
 target_include_directories(JarLoader PUBLIC "include" "include/jni")
 

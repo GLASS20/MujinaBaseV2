@@ -28,9 +28,7 @@ public class ReturnThrowMethodModifier extends MethodModifier
     {
         return new AdviceAdapter(Opcodes.ASM9, forwardTo, access, name, descriptor)
         {
-            private final Method method = new Method(info.methodName, info.methodDescriptor);
-            private final org.objectweb.asm.Type[] arguments = method.getArgumentTypes();
-            private int availableVarIndex = getMinAvailableIndex(arguments);
+            private int availableVarIndex = getMinAvailableIndex();
 
             @Override
             public void visitVarInsn(int opcode, int varIndex)
@@ -48,7 +46,6 @@ public class ReturnThrowMethodModifier extends MethodModifier
             @Override
             protected void onMethodExit(int opcode)
             {
-                /*
                 String ThrowerClassName = Thrower.class.getName().replace('.', '/');
                 mv.visitTypeInsn(Opcodes.NEW, ThrowerClassName);
                 mv.visitInsn(Opcodes.DUP);
@@ -58,45 +55,51 @@ public class ReturnThrowMethodModifier extends MethodModifier
                 mv.visitVarInsn(Opcodes.ASTORE, throwerVarIndex);
                 mv.visitMethodInsn(Opcodes.INVOKESPECIAL, ThrowerClassName, "<init>", "()V", false);
 
-
-                // push method this + method parameters on stack
-                if (!info.isStatic)
-                    mv.visitVarInsn(Opcodes.ALOAD, 0);
-
-                for (int i = (info.isStatic ? 0 : 1), a = 0; a < arguments.length; ++i, ++a)
+                if (opcode == Opcodes.ATHROW)
                 {
-                    switch (arguments[a].getSort())
+                    mv.visitInsn(Opcodes.SWAP);
+                    mv.visitFieldInsn(Opcodes.PUTFIELD, ThrowerClassName, "thrown", "Ljava/lang/Throwable;");
+
+                    // now the stack should be empty
+
+                    // push default return value, as it's not a return
+                    switch (method.getReturnType().getSort())
                     {
                         case org.objectweb.asm.Type.BOOLEAN:
                         case org.objectweb.asm.Type.CHAR:
                         case org.objectweb.asm.Type.BYTE:
                         case org.objectweb.asm.Type.SHORT:
                         case org.objectweb.asm.Type.INT:
-                            mv.visitVarInsn(Opcodes.ILOAD, i);
+                            mv.visitInsn(Opcodes.ICONST_0);
                             break;
                         case org.objectweb.asm.Type.FLOAT:
-                            mv.visitVarInsn(Opcodes.FLOAD, i);
+                            mv.visitInsn(Opcodes.FCONST_0);
                             break;
                         case org.objectweb.asm.Type.LONG:
-                            mv.visitVarInsn(Opcodes.LLOAD, i);
-                            ++i;
+                            mv.visitInsn(Opcodes.LCONST_0);
                             break;
                         case org.objectweb.asm.Type.DOUBLE:
-                            mv.visitVarInsn(Opcodes.DLOAD, i);
-                            ++i;
+                            mv.visitInsn(Opcodes.DCONST_0);
                             break;
                         case org.objectweb.asm.Type.ARRAY:
                         case org.objectweb.asm.Type.OBJECT:
-                            mv.visitVarInsn(Opcodes.ALOAD, i);
+                            mv.visitInsn(Opcodes.ACONST_NULL);
                             break;
                         default:
-                            throw new RuntimeException("incorrect argument Type or not implemented");
+                            throw new RuntimeException("incorrect return Type or not implemented");
                     }
+
+                    mv.visitVarInsn(Opcodes.ALOAD, throwerVarIndex);
                 }
 
-                // call event handler
-                mv.visitMethodInsn(Opcodes.INVOKESTATIC, info.eventMethodClass, info.eventMethodName, info.eventMethodSignature, false);
-                 */
+                pushParametersAndCallEventHandler(mv);
+
+                if (opcode == Opcodes.ATHROW)
+                {
+                    popReturnValueBasedOnReturnType(mv);
+                    mv.visitVarInsn(Opcodes.ALOAD, throwerVarIndex);
+                    mv.visitFieldInsn(Opcodes.GETFIELD, ThrowerClassName, "thrown", "");
+                }
             }
 
             private boolean isStoreOpcode(int opcode)
