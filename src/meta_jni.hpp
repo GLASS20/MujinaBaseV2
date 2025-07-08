@@ -127,6 +127,17 @@ namespace jni
 		return string_litteral(concatenated);
 	}
 
+	template<string_litteral str> inline constexpr auto to_dot()
+	{
+		char new_str[sizeof(str.value)] = { '\0' };
+		for (int i = 0; i < sizeof(str.value); ++i)
+		{
+			if (str.value[i] == '/') new_str[i] = '.';
+			else new_str[i] = str.value[i];
+		}
+		return string_litteral(new_str);
+	}
+
 	template<typename klass_type> struct jclass_cache
 	{
 		inline static std::shared_mutex mutex{};

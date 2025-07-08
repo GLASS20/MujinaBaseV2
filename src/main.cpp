@@ -59,7 +59,7 @@ static void mainFrame(const jvmti& jvmti_instance)
     if (!secureClassLoader)
         return logger::error("failed to create secureClassLoader");
 
-    jclass MemoryJarClassLoaderClass = jni::get_env()->DefineClass("io/github/lefraudeur/internal/MemoryJarClassLoader", secureClassLoader, (jbyte*)MemoryJarClassLoader_class.data(), MemoryJarClassLoader_class.size());
+    jclass MemoryJarClassLoaderClass = jni::get_env()->DefineClass(maps::MemoryJarClassLoader::get_name(), secureClassLoader, (jbyte*)MemoryJarClassLoader_class.data(), MemoryJarClassLoader_class.size());
     if (!MemoryJarClassLoaderClass)
         return logger::error("failed to define MemoryJarClassLoader class");
 
@@ -79,13 +79,13 @@ static void mainFrame(const jvmti& jvmti_instance)
     // TODO: Make meta jni custom findClass that uses the classLoader we just created
 
     // metaJNI uses env->findClass to get the jclass, however our Jar isn't in SystemClassLoader search path
-    jni::jclass_cache<maps::Main>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.Main"));
+    jni::jclass_cache<maps::Main>::value = classLoader.loadClass(maps::String::create(jni::to_dot<maps::Main::get_name()>()));
     if (!jni::jclass_cache<maps::Main>::value)
         return logger::error("failed to find io.github.lefraudeur.Main");
     logger::log("loaded main class");
 
     // Setup the classLoader trick so that minecraft classes can access the cheat classes
-    jni::jclass_cache<maps::EventClassLoader>::value = classLoader.loadClass(maps::String::create("io.github.lefraudeur.internal.EventClassLoader"));
+    jni::jclass_cache<maps::EventClassLoader>::value = classLoader.loadClass(maps::String::create(jni::to_dot<maps::EventClassLoader::get_name()>()));
     if (!jni::jclass_cache<maps::EventClassLoader>::value)
         return logger::error("failed to find io.github.lefraudeur.internal.EventClassLoader");
     maps::EventClassLoader eventClassLoader = maps::EventClassLoader::new_object(&maps::EventClassLoader::constructor, minecraft_classloader.parent.get(), (maps::ClassLoader)classLoader);

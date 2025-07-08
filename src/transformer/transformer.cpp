@@ -75,7 +75,7 @@ static bool retransform_classes(jvmtiEnv* env)
 bool transformer::init(const jvmti& jvmti_instance, const maps::MemoryJarClassLoader& classLoader)
 {
 	// we need to manually give meta jni jclass instances, and they have to be global, because they will be used from a different thread
-	jclass PatcherHelper_jclass = classLoader.loadClass(maps::String::create("io.github.lefraudeur.internal.patcher.PatcherHelper"));
+	jclass PatcherHelper_jclass = classLoader.loadClass(maps::String::create(jni::to_dot<maps::PatcherHelper::get_name()>()));
 	if (!PatcherHelper_jclass)
 	{
 		logger::error("failed to load PatcherHelperClass");
@@ -84,7 +84,7 @@ bool transformer::init(const jvmti& jvmti_instance, const maps::MemoryJarClassLo
 	PatcherHelper_jclass = (jclass)jni::get_env()->NewGlobalRef(PatcherHelper_jclass);
 	jni::jclass_cache<maps::PatcherHelper>::value = PatcherHelper_jclass;
 
-	jclass ClassModifier_jclass = classLoader.loadClass(maps::String::create("io.github.lefraudeur.internal.patcher.ClassModifier"));
+	jclass ClassModifier_jclass = classLoader.loadClass(maps::String::create(jni::to_dot<maps::ClassModifier::get_name()>()));
 	if (!ClassModifier_jclass)
 	{
 		logger::error("failed to load ClassModifier");
