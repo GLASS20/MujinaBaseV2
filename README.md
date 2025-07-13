@@ -35,7 +35,7 @@ There are some examples in [io/github/lefraudeur/TestClass.java](io/github/lefra
 #### On entry event handler
 This can be used to add a call to your event handler at the beginning of a method. \
 To declare an event handler you have to define a public static method and annotate with @EventHandler :
-```
+```JAVA
     @EventHandler(type=ON_ENTRY,
             targetClass = "net/minecraft/client/entity/EntityClientPlayerMP",
             targetMethodName = "sendChatMessage",
@@ -59,7 +59,7 @@ targetMethodDescriptor : as described in [Java Virtual Machine Specification 4.3
 ### On return/throw event handler
 This can be used to add a call to your event handler before any XRETURN / ATHROW instruction of a method. \
 To declare an event handler you have to define a public static method and annotate with @EventHandler :
-```
+```JAVA
     @EventHandler(type=ON_RETURN_THROW,
             targetClass = "net/minecraft/client/ClientBrandRetriever",
             targetMethodName = "getClientModName",
@@ -74,8 +74,14 @@ The return type must be the same as the target method's one, the value returned 
 The first parameter must be of the same type as the target method's one, it will hold the original return value.\
 If the event was triggered because of an ATHROW instruction, then `thrower.thrown` will hold the thrown value, and you can use that field to override it.
 
+# Known issues
+- The classes aren't unloaded properly
+- On reinject, some modifications made to the jar might not be taken into account, because it will use the previous classes that haven't been unloaded properly. (This is likely due to the retransformed classes keeping resolved event handler method in cache, which prevent them from beeing unloaded, possible fix : use reflection, so that resolved methods aren't cached, problem : bad performance because it will have to lookup for the methods using symbolic names every time)
+- It leaves a lot of traces (not fixable)
 
-# How do I call the original unmodified method ?
+# FAQ
+
+## How do I call the original unmodified method ?
 At the moment, there is no way to call the original method that won't trigger the event. \
 So do not call the modified method from its event handler, otherwise you will end up in an infinite loop. \
 The possible workarounds would be :
@@ -83,7 +89,7 @@ The possible workarounds would be :
 - Reimplement the original method yourself (takes a lot of time, and will need to use reflection for private fields/methods)
 
 
-# How can I access private fields/methods ?
+## How can I access private fields/methods ?
 The project does not include any easy way to access private fields/methods of the game, \
 You will have to use java reflection api to do that \
 However be aware that the strings you will use to make your reflection calls won't be remapped automatically. \
@@ -92,7 +98,32 @@ It is planned to include a way to remap these strings automatically in the futur
 
 # Working Principle
 ## Building process detailed
-- 
+1. InjectableJar parent maven project is built :
+
+    - child [InjectableJar/InjectableJar-commons](InjectableJar/InjectableJar-commons) is built
+    - child [InjectableJar/InjectableJar-processor](InjectableJar/InjectableJar-processor) is built
+    - child [InjectableJar/InjectableJar](InjectableJar/InjectableJar) is built, which causes the [annotation processor](InjectableJar/InjectableJar-processor) to be run.\
+    For more informations about annotation processors see : [Processor javadoc](https://docs.oracle.com/en/java/javase/22/docs/api/java.compiler/javax/annotation/processing/Processor.html)
+    and [javac annotation processing](https://docs.oracle.com/en/java/javase/22/docs/specs/man/javac.html#annotation-processing) \
+    The annotation processor will read the @EventHandler annotations and generate the class : io.github.lefraudeur.internal.patcher.Patcher, you can see the generated source file in `target/generated-sources`\
+    This class will regroup all required informations about the target classes and the transformations to apply, the annotation processor will also remap the names given to the @EventHandler annotations using [FabricMC mapping-io](https://github.com/FabricMC/mapping-io). \
+    It will use the properties `remapper.mappingFilePath`, `remapper.sourceNamespace`, `remapper.destinationNamespace` defined in [InjectableJar/pom.xml](InjectableJar/pom.xml), which can be overridden from the CLI,the `remapper.destinationNamespace` property is overridden in [build_vanilla.bat](build_vanilla.bat) : `mvn package -Dremapper.destinationNamespace=obfuscated`. \
+    Example generated class source file :
+
+        ```JAVA
+        package io.github.lefraudeur.internal.patcher;
+        import io.github.lefraudeur.internal.patcher.MethodModifier.MethodModifierInfo;
+
+        public class Patcher
+        {
+            public final static ClassModifier[] classModifiers = 
+            {
+                new ClassModifier("bjk", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Canceler;Lbjk;Ljava/lang/String;)V", false)), new ReturnThrowMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Thrower;Lbjk;Ljava/lang/String;)V", false))}),
+                new ClassModifier("net/minecraft/client/ClientBrandRetriever", new MethodModifier[]{new ReturnThrowMethodModifier(new MethodModifierInfo("getClientModName", "()Ljava/lang/String;", "io/github/lefraudeur/TestClass", "getClientModName", "(Ljava/lang/String;Lio/github/lefraudeur/internal/Thrower;)Ljava/lang/String;", true))}),
+                new ClassModifier("aji", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Lahl;IIII)Z", "io/github/lefraudeur/TestClass", "shouldSideBeRendered", "(Lio/github/lefraudeur/internal/Canceler;Laji;Lahl;IIII)Z", false))})
+            };
+        }
+        ```
 
 ## What happens on inject
 
@@ -102,7 +133,7 @@ I've tried my best to explain the structure of this project in the previous sect
 
 Some hints about what you might need to modify:
 - [InjectableJar/InjectableJar/remapper/1.7.10.tiny](InjectableJar/InjectableJar/remapper/1.7.10.tiny), to whatever mappings you wish to apply
-- [InjectableJar/InjectableJar/remapper/client.jar](InjectableJar/InjectableJar/remapper/client.jar) (original vanilla mineecraft client) from [minecraft version manifest](https://piston-meta.mojang.com/mc/game/version_manifest_v2.json)
+- [InjectableJar/InjectableJar/remapper/client.jar](InjectableJar/InjectableJar/remapper/client.jar) (original vanilla minecraft client) from [minecraft version manifest](https://piston-meta.mojang.com/mc/game/version_manifest_v2.json)
 - [InjectableJar/InjectableJar/remapper/client_named.jar](InjectableJar/InjectableJar/remapper/client_named.jar) / [client_srg.jar](InjectableJar/InjectableJar/remapper/client_srg.jar), [client.jar](InjectableJar/InjectableJar/remapper/client.jar) remapped using tiny remapper to understandable names for coding (named), and to other intermediary names (srg in this case)
 - minecraft jar (client_named.jar) used as a dependency to code InjectableJar.jar, defined in InjectableJar/pom.xml :
     ```xml
@@ -113,7 +144,7 @@ Some hints about what you might need to modify:
     </dependency>
     ```
     So you will have to install the client_named.jar to [local_maven_repo](InjectableJar\InjectableJar\local_maven_repo) using :
-    ```
+    ```SH
     mvn org.apache.maven.plugins:maven-install-plugin:3.1.2:install-file -Dfile=../client_named.jar -DgroupId=your.groupId -DartifactId=your-artifactId -Dversion=version -Dpackaging=jar -DlocalRepositoryPath=local_maven_repo
     ```
 - minecraft dependencies, listed in the corresponding [minecraft version manifest](https://piston-meta.mojang.com/mc/game/version_manifest_v2.json), and that are added to [InjectableJar/pom.xml](InjectableJar/pom.xml) dependencies
@@ -143,7 +174,8 @@ It is also now way easier to make new events, and they don't use reflection anym
 
 # Disclaimer
 There is no guarrantee that this base can actually be used to build a functional cheat (it was not tested), or to fit any other particular purpose \
-It is purely something to play with
+It is purely something to play with. \
+I encourage you to use this base as a resource to build your own, that will fit your needs.
 
 Although the term "Injectable" is often associated with modifying minecraft in a more stealthy way, it is not the case at all for this base.\
 This base isn't built to bypass any anticheats or detections of any sort.\
