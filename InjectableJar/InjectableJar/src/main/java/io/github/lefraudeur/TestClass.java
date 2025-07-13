@@ -42,4 +42,14 @@ public class TestClass
             return true;
         return false;
     }
+
+    @EventHandler(type=ON_RETURN_THROW,
+            targetClass = "net/minecraft/client/ClientBrandRetriever",
+            targetMethodName = "getClientModName",
+            targetMethodDescriptor = "()Ljava/lang/String;",
+            targetMethodIsStatic = true)
+    public static String getClientModName(String returnValue, Thrower thrower)
+    {
+        return returnValue + " (Mujina Boosted)";
+    }
 }
