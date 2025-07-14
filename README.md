@@ -82,6 +82,68 @@ If the event was triggered because of an ATHROW instruction, then `thrower.throw
 - On reinject, some modifications made to the jar might not be taken into account, because it will use the previous classes that haven't been unloaded properly. (This is likely due to the retransformed classes keeping resolved event handler method in cache, which prevent them from beeing unloaded, possible fix : use reflection, so that resolved methods aren't cached, problem : bad performance because it will have to lookup for the methods using symbolic names every time)
 - It leaves a lot of traces (not fixable)
 - The classloader trick I use for the modified method to be able to call event handlers might not work on all clients, for example on lunar, the classLoader does not necessarily forward the loadClass to its parent first, except for some internal jdk classes, which breaks the trick. (using reflection will also fix that, at the cost of performance, since the classloader trick won't be needed anymore)
+
+# Working Principle
+## Building process detailed
+### 1. InjectableJar parent maven project is built :
+
+- Child [InjectableJar/InjectableJar-commons](InjectableJar/InjectableJar-commons) is built
+
+- Child [InjectableJar/InjectableJar-processor](InjectableJar/InjectableJar-processor) is built
+
+- Child [InjectableJar/InjectableJar](InjectableJar/InjectableJar) is built, which causes the [annotation processor](InjectableJar/InjectableJar-processor) to be run :
+
+    For more informations about annotation processors see : [Processor javadoc](https://docs.oracle.com/en/java/javase/22/docs/api/java.compiler/javax/annotation/processing/Processor.html)
+    and [javac annotation processing](https://docs.oracle.com/en/java/javase/22/docs/specs/man/javac.html#annotation-processing) \
+    The annotation processor will read the @EventHandler annotations and generate the class : io.github.lefraudeur.internal.patcher.Patcher, you can see the generated source file in `target/generated-sources`\
+    This class will regroup all required informations about the target classes and the transformations to apply, the annotation processor will also remap the names given to the @EventHandler annotations using [FabricMC mapping-io](https://github.com/FabricMC/mapping-io). \
+    It will use the properties `remapper.mappingFilePath`, `remapper.sourceNamespace`, `remapper.destinationNamespace` defined in [InjectableJar/pom.xml](InjectableJar/pom.xml), which can be overridden from the CLI,the `remapper.destinationNamespace` property is overridden in [build_vanilla.bat](build_vanilla.bat) : `mvn package -Dremapper.destinationNamespace=obfuscated`. \
+    Example generated class source file (unreadable lol):
+    ```JAVA
+    package io.github.lefraudeur.internal.patcher;
+    import io.github.lefraudeur.internal.patcher.MethodModifier.MethodModifierInfo;
+
+    public class Patcher
+    {
+        public final static ClassModifier[] classModifiers = 
+        {
+            new ClassModifier("bjk", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Canceler;Lbjk;Ljava/lang/String;)V", false)), new ReturnThrowMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Thrower;Lbjk;Ljava/lang/String;)V", false))}),
+            new ClassModifier("net/minecraft/client/ClientBrandRetriever", new MethodModifier[]{new ReturnThrowMethodModifier(new MethodModifierInfo("getClientModName", "()Ljava/lang/String;", "io/github/lefraudeur/TestClass", "getClientModName", "(Ljava/lang/String;Lio/github/lefraudeur/internal/Thrower;)Ljava/lang/String;", true))}),
+            new ClassModifier("aji", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Lahl;IIII)Z", "io/github/lefraudeur/TestClass", "shouldSideBeRendered", "(Lio/github/lefraudeur/internal/Canceler;Laji;Lahl;IIII)Z", false))})
+        };
+    }
+    ```
+    This is an array of ClassModifier, each ClassModifier containing the target class's name that has to be modified. Giving the original class bytes, a ClassModifier is able to generate the transformed class bytes by applying a chain of transformations, each transformation beeing represented by a MethodModifier. The class bytes are edited using the asm library. The [asm user guide](https://asm.ow2.io/asm4-guide.pdf) is a great resource to learn how to use the library, and to learn java bytecode in general. Take also a look at the [Java Virtual Machine Specification](https://docs.oracle.com/javase/specs/jvms/se24/html/index.html).
+    The generated Patcher class is used by the [PatcherHelper](InjectableJar/InjectableJar/src/main/java/io/github/lefraudeur/internal/patcher/PatcherHelper.java) class, whose methods are called by [transformer.cpp](src/transformer/transformer.cpp). The role of [transformer.cpp](src/transformer/transformer.cpp) is to call jvmti [RetransformClasses](https://docs.oracle.com/en/java/javase/22/docs/specs/jvmti.html#RetransformClasses) on the classes that has to be modified (listed by the Patcher class generated by the annotation processor). This jvmti api allows to replace the definition of a loaded class at runtime.
+
+    Before building the project, it will also copy the non shaded dependencies to `InjectableJar\InjectableJar\remapper\libs`, which will be given to tiny remapper as a class path.
+
+### 2. InjectableJar-1.0-SNAPSHOT-shaded.jar is remapped
+Your classes now have symbolic references to minecraft classes / methods / fields using human readable names (mcp mappings in this case), however the minecraft client in which we wish to inject, probably doesn't use these names, so it has to be remapped, so that the references can be successfully resolved at runtime.
+
+This is done using [FabricMC tiny remapper](https://github.com/FabricMC/tiny-remapper), the tool is used as follows :
+```SH
+java -jar tiny-remapper-0.9.0-fat.jar input.jar output_remapped.jar mappings_file.tiny source_namespace destination_namespace additional_class_paths...
+```
+`source_namespace`and `destinatino_namespace` must be namespaces' names defined by `mappings_file.tiny` \
+`additional_class_paths` are paths to any jars your input.jar might depend on. 
+
+### 3. Remapped InjectableJar-1.0-SNAPSHOT-shaded.jar's bytes are written in `InjectableJar.jar.hpp`
+This is done using ignore_File2Hex.exe, which will convert any file in the working directory that doesn't start with ignore_ and doesn't end with .hpp, into the corresponding .hpp file. \
+The source code for that program can be found here : [File2hex/main.cpp](File2Hex/main.cpp)
+
+### 4. The C++ cmake project is built
+```SH
+cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMINECRAFT_CLASS="bao"
+cmake --build build
+```
+The dll needs to be aware of the Minecraft class name, so that it can get its class loader. For [build_vanilla.bat](build_vanilla.bat), it's "bao", as written in [1.7.10.tiny]()
+
+## What happens on inject
+Writing in progress, read the src for now
+
+The c++ part makes use of [MetaJNI](https://github.com/Lefraudeur/MetaJNI) to make jni usage clearer.
+
 # FAQ
 
 ## How do I call the original unmodified method ?
@@ -97,69 +159,7 @@ The project does not include any easy way to access private fields/methods of th
 You will have to use java reflection api to do that \
 However be aware that the strings you will use to make your reflection calls won't be remapped automatically.
 
-
-# Working Principle
-## Building process detailed
-1. ### InjectableJar parent maven project is built :
-
-    - Child [InjectableJar/InjectableJar-commons](InjectableJar/InjectableJar-commons) is built
-
-    - Child [InjectableJar/InjectableJar-processor](InjectableJar/InjectableJar-processor) is built
-
-    - Child [InjectableJar/InjectableJar](InjectableJar/InjectableJar) is built, which causes the [annotation processor](InjectableJar/InjectableJar-processor) to be run :
-
-        For more informations about annotation processors see : [Processor javadoc](https://docs.oracle.com/en/java/javase/22/docs/api/java.compiler/javax/annotation/processing/Processor.html)
-        and [javac annotation processing](https://docs.oracle.com/en/java/javase/22/docs/specs/man/javac.html#annotation-processing) \
-        The annotation processor will read the @EventHandler annotations and generate the class : io.github.lefraudeur.internal.patcher.Patcher, you can see the generated source file in `target/generated-sources`\
-        This class will regroup all required informations about the target classes and the transformations to apply, the annotation processor will also remap the names given to the @EventHandler annotations using [FabricMC mapping-io](https://github.com/FabricMC/mapping-io). \
-        It will use the properties `remapper.mappingFilePath`, `remapper.sourceNamespace`, `remapper.destinationNamespace` defined in [InjectableJar/pom.xml](InjectableJar/pom.xml), which can be overridden from the CLI,the `remapper.destinationNamespace` property is overridden in [build_vanilla.bat](build_vanilla.bat) : `mvn package -Dremapper.destinationNamespace=obfuscated`. \
-        Example generated class source file :
-        ```JAVA
-        package io.github.lefraudeur.internal.patcher;
-        import io.github.lefraudeur.internal.patcher.MethodModifier.MethodModifierInfo;
-
-        public class Patcher
-        {
-            public final static ClassModifier[] classModifiers = 
-            {
-                new ClassModifier("bjk", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Canceler;Lbjk;Ljava/lang/String;)V", false)), new ReturnThrowMethodModifier(new MethodModifierInfo("a", "(Ljava/lang/String;)V", "io/github/lefraudeur/TestClass", "sendChatMessage", "(Lio/github/lefraudeur/internal/Thrower;Lbjk;Ljava/lang/String;)V", false))}),
-                new ClassModifier("net/minecraft/client/ClientBrandRetriever", new MethodModifier[]{new ReturnThrowMethodModifier(new MethodModifierInfo("getClientModName", "()Ljava/lang/String;", "io/github/lefraudeur/TestClass", "getClientModName", "(Ljava/lang/String;Lio/github/lefraudeur/internal/Thrower;)Ljava/lang/String;", true))}),
-                new ClassModifier("aji", new MethodModifier[]{new EntryMethodModifier(new MethodModifierInfo("a", "(Lahl;IIII)Z", "io/github/lefraudeur/TestClass", "shouldSideBeRendered", "(Lio/github/lefraudeur/internal/Canceler;Laji;Lahl;IIII)Z", false))})
-            };
-        }
-        ```
-        This is an array of ClassModifier, each ClassModifier containing the target class's name that has to be modified. Giving the original class bytes, a ClassModifier is able to generate the transformed class bytes by applying a chain of transformations, each transformation beeing represented by a MethodModifier. The class bytes are edited using the asm library. The [asm user guide](https://asm.ow2.io/asm4-guide.pdf) is a great resource to learn how to use the library, and to learn java bytecode in general. Take also a look at the [Java Virtual Machine Specification](https://docs.oracle.com/javase/specs/jvms/se24/html/index.html).
-        The generated Patcher class is used by the [PatcherHelper](InjectableJar/InjectableJar/src/main/java/io/github/lefraudeur/internal/patcher/PatcherHelper.java) class, whose methods are called by [transformer.cpp](src/transformer/transformer.cpp). The role of [transformer.cpp](src/transformer/transformer.cpp) is to call jvmti [RetransformClasses](https://docs.oracle.com/en/java/javase/22/docs/specs/jvmti.html#RetransformClasses) on the classes that has to be modified (listed by the Patcher class generated by the annotation processor). This jvmti api allows to replace the definition of a loaded class at runtime.
-
-        Before building the project, it will also copy the non shaded dependencies to `InjectableJar\InjectableJar\remapper\libs`, which will be given to tiny remapper as a class path.
-
-2. ### InjectableJar-1.0-SNAPSHOT-shaded.jar is remapped
-Your classes now have symbolic references to minecraft classes / methods / fields using human readable names (mcp mappings in this case), however the minecraft client in which we wish to inject, probably doesn't use these names, so it has to be remapped, so that the references can be successfully resolved at runtime.
-
-This is done using [FabricMC tiny remapper](https://github.com/FabricMC/tiny-remapper), the tool is used as follows :
-```SH
-java -jar tiny-remapper-0.9.0-fat.jar input.jar output_remapped.jar mappings_file.tiny source_namespace destination_namespace additional_class_paths...
-```
-`source_namespace`and `destinatino_namespace` must be namespaces' names defined by `mappings_file.tiny` \
-`additional_class_paths` are paths to any jars your input.jar might depend on. 
-
-3. ### remapped InjectableJar-1.0-SNAPSHOT-shaded.jar's bytes are written in `InjectableJar.jar.hpp`
-This is done using ignore_File2Hex.exe, which will convert any file in the working directory that doesn't start with ignore_ and doesn't end with .hpp, into the corresponding .hpp file. \
-The source code for that program can be found here : [File2hex/main.cpp](File2Hex/main.cpp)
-
-4. ### the C++ cmake project is built
-```SH
-cmake -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMINECRAFT_CLASS="bao"
-cmake --build build
-```
-The dll needs to be aware of the Minecraft class name, so that it can get its class loader. For [build_vanilla.bat](build_vanilla.bat), it's "bao", as written in [1.7.10.tiny]()
-
-## What happens on inject
-Writing in progress
-
-The c++ part makes use of [MetaJNI](https://github.com/Lefraudeur/MetaJNI) to make jni usage clearer.
-
-# How do I adapt the project to work with another minecraft version ?
+## How do I adapt the project to work with another minecraft version ?
 I've tried my best to explain the structure of this project in the previous sections, make sure to read them carefully, as well as check out the external references.
 
 Some hints about what you might need to modify:
@@ -188,7 +188,7 @@ And rarely, when you switch java version:
 - InjectableJar/pom.xml property : maven.compiler.release (java version has to be lower or equal to the one of the jvm you inject to)
 - asm library version and api version (Opcodes.ASMX)
 
-# How do I add a dependency to my jar ?
+## How do I add a dependency to my jar ?
 Most of the time you should edit [InjectableJar/InjectableJar/pom.xml](InjectableJar/InjectableJar/pom.xml) `<dependencies>` \
 as well as add it to the shade plugin `<includes>`, so that it's embedded in InjectableJar
 
@@ -199,10 +199,10 @@ To fix that issue, you can modify MemoryJarClassLoader, so that it doesn't deleg
 just like it's done for the asm dependency : [MemoryJarClassLoader.java](memory-jar-classloader/src/main/java/io/github/lefraudeur/internal/MemoryJarClassLoader.java) \
 Once you made your changes, you will have to compile it, and write its bytes to [src/MemoryJarClassLoader.class.hpp](src/MemoryJarClassLoader.class.hpp)
 
-# How do I inject ?
+## How do I inject ?
 Idk
 
-# Mujina ?
+## Mujina ?
 This project is very similar to the previous one [Mujina-Public](https://github.com/Lefraudeur/Mujina-Public) \
 Except this time, it focuses on the base, rather than the possible cheat modules you could do using it. \
 There are also a lot of improvement on the jar loading method, it is now less likely to fail, and should be faster.\
