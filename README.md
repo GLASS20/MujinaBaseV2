@@ -6,7 +6,8 @@ The base is for 1.7.10 minecraft, however it should be adaptable to any minecraf
 It works only on windows at the moment, however it could be modified to work on linux fairly easily \
 (replace building scripts, and add jvm.so).
 
-THIS IS NOT A WAY TO INJECT FORGE / FABRIC MODS, it only allows you to build an injectable jar that can access minecraft classes, as well as slightly modify existing minecraft methods' implementations using events.\ Which means to actually make use of that base, you need to understand the minecraft source code, and know exactly which part of it you wish to modify, and what you wanna add to it.
+THIS IS NOT A WAY TO INJECT FORGE / FABRIC MODS, it only allows you to build an injectable jar that can access minecraft classes, as well as slightly modify existing minecraft methods' implementations using events.\
+Which means to actually make use of that base, you need to understand the minecraft source code, and know exactly which part of it you wish to modify, and what you wanna add to it.
 # Building
 
 The project is meant to be fully portable, so it should work on any windows environment by running [build_srg.bat](build_srg.bat) (for forge) or [build_vanilla.bat](build_vanilla.bat) (for vanilla), without manually installing dependencies or building tools.\
