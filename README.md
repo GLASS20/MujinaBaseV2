@@ -10,8 +10,13 @@ THIS IS NOT A WAY TO INJECT FORGE / FABRIC MODS, it only allows you to build an 
 Which means to actually make use of that base, you need to understand the minecraft source code, and know exactly which part of it you wish to modify, and what you wanna add to it.
 # Building
 
-The project is meant to be fully portable, so it should work on any windows environment by running [build_srg.bat](build_srg.bat) (for forge) or [build_vanilla.bat](build_vanilla.bat) (for vanilla), without manually installing dependencies or building tools.\
-However the maven project relies on multiple online repositories, which could break the build if they were to go offline.
+The project is meant to be fully portable, so it should work on any windows environment by running [build_srg.bat](build_srg.bat) (for forge) or [build_vanilla.bat](build_vanilla.bat) (for vanilla), [build_named.bat](build_named.bat) (for lunar) without manually installing dependencies or building tools.\
+However the maven project relies on multiple online repositories, which could break the build if they were to go offline. \
+The compiled dll will be saved in `build/JarLoader.dll`
+
+By default the dll should print "hello from Mujina" in chat on inject and "bye from Mujina" on uninject. \
+It also has some example premade events, like one that makes shouldSideBerendered return false. \
+See : [TestClass.java](InjectableJar/InjectableJar/src/main/java/io/github/lefraudeur/TestClass.java)
 
 Since you don't build using your IDE, make sure you save all the files you edited with your IDE first.
 
@@ -82,7 +87,9 @@ If the event was triggered because of an ATHROW instruction, then `thrower.throw
 - The classes aren't unloaded properly
 - On reinject, some modifications made to the jar might not be taken into account, because it will use the previous classes that haven't been unloaded properly. (This is likely due to the retransformed classes keeping resolved event handler method in cache, which prevent them from beeing unloaded, possible fix : use reflection, so that resolved methods aren't cached, problem : bad performance because it will have to lookup for the methods using symbolic names every time)
 - It leaves a lot of traces (not fixable)
-- The classloader trick I use for the modified method to be able to call event handlers might not work on all clients, for example on lunar, the classLoader does not necessarily forward the loadClass to its parent first, except for some internal jdk classes, which breaks the trick. (using reflection will also fix that, at the cost of performance, since the classloader trick won't be needed anymore)
+- The classloader trick I use for the modified method to be able to call event handlers might not work on all clients, for example on lunar, the classLoader does not necessarily forward the loadClass to its parent first, except for some internal jdk classes, which breaks the trick. (using reflection will also fix that, at the cost of performance, since the classloader trick won't be needed anymore) \
+Edit : injection  on lunar has been fixed, by excluding the event handler classes from lunar classloader (the lunar classloader holds a Set with excluded class names)
+- Since java 9, modules were introduced, it could cause some issues, for example I know a module has to list the modules it will use reflection on.
 
 # Working Principle
 ## Building process detailed
@@ -197,7 +204,7 @@ If you add a dependency, that is already in the game classpath, then you don't h
 If you do decide to add the dependency in the shaded jar, it won't override the one already in the game, \
 so you might have some problems when the dependency version used in InjectableJar, is different from the version used in game (I got this issue with the asm library) \
 To fix that issue, you can modify MemoryJarClassLoader, so that it doesn't delegate the class loading process to its parent (the game classloader), \
-just like it's done for the asm dependency : [MemoryJarClassLoader.java](memory-jar-classloader/src/main/java/io/github/lefraudeur/internal/MemoryJarClassLoader.java) \
+just like it's done for the asm dependency : [MemoryJarClassLoader.java](InjectableJar/memory-jar-classloader/src/main/java/io/github/lefraudeur/internal/MemoryJarClassLoader.java) \
 Once you made your changes, you will have to compile it, and write its bytes to [src/MemoryJarClassLoader.class.hpp](src/MemoryJarClassLoader.class.hpp)
 
 ## How do I inject ?
