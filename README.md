@@ -1,6 +1,6 @@
 # MujinaBaseV2
 
-An injectable java cheat base for minecraft with a cool event system, loaded with C++, that can remap to work on vanilla and forge
+An injectable java cheat base for minecraft with a cool event system, loaded with C++, that can remap to work on vanilla, forge and lunar client
 
 The base is for 1.7.10 minecraft, however it should be adaptable to any minecraft version. \
 It works only on windows at the moment, however it could be modified to work on linux fairly easily \
