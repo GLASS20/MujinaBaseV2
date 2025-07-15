@@ -30,6 +30,12 @@ public class EntryMethodModifier extends MethodModifier
             @Override
             protected void onMethodEnter()
             {
+                if (USE_REFLECTION)
+                {
+                    reflectionImplementation(mv);
+                    return;
+                }
+
                 // new Canceler()
                 String CancelerClassName = Canceler.class.getName().replace('.', '/');
                 mv.visitTypeInsn(Opcodes.NEW, CancelerClassName);
@@ -57,5 +63,11 @@ public class EntryMethodModifier extends MethodModifier
                 popReturnValueBasedOnReturnType(mv);
             }
         };
+    }
+
+    private void reflectionImplementation(MethodVisitor mv)
+    {
+
+        return;
     }
 }

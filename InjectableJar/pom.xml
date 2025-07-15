@@ -6,6 +6,7 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>memory-jar-classloader</module>
     <module>InjectableJar-commons</module>
     <module>InjectableJar-processor</module>
     <module>InjectableJar</module>

@@ -7,6 +7,9 @@ import org.objectweb.asm.commons.Method;
 
 public abstract class MethodModifier implements NewInstanceStringable
 {
+    // causes performance issues, but fixes some issues, not implemented yet
+    protected static final boolean USE_REFLECTION = false;
+
     public enum Type
     {
         ON_ENTRY,

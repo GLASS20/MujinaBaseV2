@@ -22,6 +22,16 @@ public class MemoryJarClassLoader extends ClassLoader
         this.jarBytes = jarBytes;
     }
 
+    public Class<?> loadClassNoDelegation(String name, boolean resolve) throws ClassNotFoundException
+    {
+        Class<?> found = findLoadedClass(name);
+        if (found == null)
+            found = findClass(name);
+        if (resolve)
+            resolveClass(found);
+        return found;
+    }
+
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
     {

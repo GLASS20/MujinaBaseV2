@@ -5,17 +5,34 @@
 
 namespace maps
 {
+	KLASS_DECLARATION(Class, "java/lang/Class");
+	KLASS_DECLARATION(String, "java/lang/String");
+
 	BEGIN_KLASS_DEF(Object, "java/lang/Object")
 	END_KLASS_DEF()
 
-	BEGIN_KLASS_DEF(Class, "java/lang/Class")
+	BEGIN_KLASS_DEF(Type, "java/lang/reflect/Type")
+		jni::method<String, "getTypeName"> getTypeName{ *this };
+	END_KLASS_DEF()
+
+	BEGIN_KLASS_DEF(Field, "java/lang/reflect/Field")
+		jni::method<Class, "getType"> getType{*this};
+		jni::method<Type, "getGenericType"> getGenericType{ *this };
+		jni::method<String, "toGenericString"> toGenericString{ *this };
+	END_KLASS_DEF()
+
+	BEGIN_KLASS_MEMBERS(Class)
 		operator jclass() const
 		{
 			return (jclass)object_instance;
 		}
-	END_KLASS_DEF()
 
-	BEGIN_KLASS_DEF(String, "java/lang/String")
+		jni::method<jni::array<Field>, "getDeclaredFields"> getDeclaredFields{ *this };
+		jni::method<String, "getName"> getName{ *this };
+		jni::method<String, "getTypeName"> getTypeName{ *this };
+	END_KLASS_MEMBERS()
+
+	BEGIN_KLASS_MEMBERS(String)
 		static String create(const char* str)
 		{
 			return String(jni::get_env()->NewStringUTF(str));
@@ -33,7 +50,7 @@ namespace maps
 			jni::get_env()->GetStringUTFRegion(str_obj, 0, size, str.data());
 			return str;
 		}
-	END_KLASS_DEF()
+	END_KLASS_MEMBERS()
 
 	BEGIN_KLASS_DEF(Collection, "java/util/Collection")
 		jni::method<jni::array<Object>, "toArray"> toArray{ *this };
@@ -63,6 +80,7 @@ namespace maps
 
 	BEGIN_KLASS_DEF_EX(SecureClassLoader, "java/security/SecureClassLoader", ClassLoader)
 		jni::constructor<> constructor{*this};
+		jni::constructor<ClassLoader> constructor2{ *this };
 	END_KLASS_DEF()
 
 	BEGIN_KLASS_DEF_EX(MemoryJarClassLoader, "io/github/lefraudeur/internal/MemoryJarClassLoader", ClassLoader)
@@ -75,7 +93,7 @@ namespace maps
 	END_KLASS_DEF()
 
 	BEGIN_KLASS_DEF_EX(EventClassLoader, "io/github/lefraudeur/internal/EventClassLoader", ClassLoader)
-		jni::constructor<ClassLoader, ClassLoader> constructor{ *this };
+		jni::constructor<ClassLoader, MemoryJarClassLoader> constructor{ *this };
 	END_KLASS_DEF()
 
 	BEGIN_KLASS_DEF(ClassModifier, "io/github/lefraudeur/internal/patcher/ClassModifier")

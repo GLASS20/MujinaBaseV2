@@ -17,10 +17,10 @@ void logger::shutdown()
 
 void logger::log(std::string_view msg)
 {
-	logfile << "info: " << msg << '\n';
+	logfile << "info: " << msg << std::endl;
 }
 
 void logger::error(std::string_view msg)
 {
-	logfile << "error: " << msg << '\n';
+	logfile << "error: " << msg << std::endl;
 }

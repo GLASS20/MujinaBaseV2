@@ -52,10 +52,8 @@ static void mainFrame(const jvmti& jvmti_instance)
     if (!minecraft_classloader)
         return logger::error("failed to get minecraft_classloader");
 
-
-
     // create a new classloader, and make it define the MemoryJarClassLoader class
-    maps::SecureClassLoader secureClassLoader = maps::SecureClassLoader::new_object(&maps::SecureClassLoader::constructor);
+    maps::SecureClassLoader secureClassLoader = maps::SecureClassLoader::new_object(&maps::SecureClassLoader::constructor2, (maps::ClassLoader)minecraft_classloader);
     if (!secureClassLoader)
         return logger::error("failed to create secureClassLoader");
 
@@ -72,7 +70,7 @@ static void mainFrame(const jvmti& jvmti_instance)
     // warning: MemoryJarClassLoader also changes the delegation model for the asm library, so you might have issues doing that 
     // (you could code a new ClassLoader that extends URLClassLoader to fix it)
     jni::array<jbyte> InjectableJarJbyteArray = jni::array<jbyte>::create(std::vector<jbyte>(InjectableJar_jar.begin(), InjectableJar_jar.end()));
-    maps::MemoryJarClassLoader classLoader = maps::MemoryJarClassLoader::new_object(&maps::MemoryJarClassLoader::constructor, InjectableJarJbyteArray, (maps::ClassLoader)minecraft_classloader);
+    maps::MemoryJarClassLoader classLoader = maps::MemoryJarClassLoader::new_object(&maps::MemoryJarClassLoader::constructor, InjectableJarJbyteArray, (maps::ClassLoader)secureClassLoader);
     if (!classLoader)
         return logger::error("failed to create memoryJarClassLoader");
 
@@ -88,7 +86,7 @@ static void mainFrame(const jvmti& jvmti_instance)
     jni::jclass_cache<maps::EventClassLoader>::value = classLoader.loadClass(maps::String::create(jni::to_dot<maps::EventClassLoader::get_name()>()));
     if (!jni::jclass_cache<maps::EventClassLoader>::value)
         return logger::error("failed to find io.github.lefraudeur.internal.EventClassLoader");
-    maps::EventClassLoader eventClassLoader = maps::EventClassLoader::new_object(&maps::EventClassLoader::constructor, minecraft_classloader.parent.get(), (maps::ClassLoader)classLoader);
+    maps::EventClassLoader eventClassLoader = maps::EventClassLoader::new_object(&maps::EventClassLoader::constructor, minecraft_classloader.parent.get(), classLoader);
 
     minecraft_classloader.parent = (maps::ClassLoader)eventClassLoader;
 

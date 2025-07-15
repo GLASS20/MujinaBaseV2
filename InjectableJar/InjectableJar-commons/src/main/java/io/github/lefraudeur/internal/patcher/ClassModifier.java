@@ -3,9 +3,7 @@ package io.github.lefraudeur.internal.patcher;
 
 import org.objectweb.asm.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class ClassModifier implements NewInstanceStringable
 {
@@ -71,5 +69,13 @@ public class ClassModifier implements NewInstanceStringable
             builder.append(", ");
         }
         return String.format(str, name, builder);
+    }
+
+    public Set<String> getEventHandlerClassesNames()
+    {
+        Set<String> result = new HashSet<>();
+        for (MethodModifier modifier : modifiers)
+            result.add(modifier.info.eventMethodClass.replace('/', '.'));
+        return result;
     }
 }
