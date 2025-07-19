@@ -1,7 +1,11 @@
 package io.github.lefraudeur.internal.patcher;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
+import static org.objectweb.asm.Type.*;
 
 
 // event handler format:
@@ -27,7 +31,13 @@ public class LDCConstantModifier extends MethodModifier
             public void visitLdcInsn(Object value)
             {
                 super.visitLdcInsn(value);
-                if (!(value instanceof String || value instanceof  Integer || value instanceof Float || value instanceof Double || value instanceof Long || value instanceof Type))
+                if (!(value instanceof String
+                        || value instanceof  Integer
+                        || value instanceof Float
+                        || value instanceof Double
+                        || value instanceof Long
+                        || value instanceof org.objectweb.asm.Type
+                        || value instanceof Handle))
                     return;
 
                 if (value instanceof Integer)
@@ -93,6 +103,17 @@ public class LDCConstantModifier extends MethodModifier
                     mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
                     mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
                 }
+                else if (value instanceof org.objectweb.asm.Type)
+                {
+                    int sort = ((org.objectweb.asm.Type)value).getSort();
+                    if (sort == OBJECT || sort == ARRAY)
+                        mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Class");
+                    else if (sort == METHOD)
+                        mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/invoke/MethodType");
+                    else throw new RuntimeException("LDCConstantModifier: constant is a Type, but not supported");
+                }
+                else if (value instanceof Handle)
+                    mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/invoke/MethodHandle");
             }
         };
         return this.new AvailableIndexMethodVisitor(Opcodes.ASM9, methodVisitor);
