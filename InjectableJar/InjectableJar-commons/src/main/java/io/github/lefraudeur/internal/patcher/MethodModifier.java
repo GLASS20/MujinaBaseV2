@@ -13,7 +13,8 @@ public abstract class MethodModifier implements NewInstanceStringable
     public enum Type
     {
         ON_ENTRY,
-        ON_RETURN_THROW
+        ON_RETURN_THROW,
+        ON_LDC_CONSTANT
     }
 
     public static class MethodModifierInfo implements NewInstanceStringable
@@ -56,6 +57,9 @@ public abstract class MethodModifier implements NewInstanceStringable
     protected final org.objectweb.asm.Type[] arguments;
     protected final org.objectweb.asm.Type returnType;
 
+    // use AvailableIndexMethodVisitor before if you wish to calculate availableVarIndex
+    protected int availableVarIndex;
+
     public MethodModifier(Type type, MethodModifierInfo info)
     {
         this.type = type;
@@ -63,11 +67,42 @@ public abstract class MethodModifier implements NewInstanceStringable
         this.method = new Method(info.methodName, info.methodDescriptor);
         this.arguments = method.getArgumentTypes();
         this.returnType = method.getReturnType();
+        this.availableVarIndex = getMinAvailableIndex();
     }
 
     public abstract MethodVisitor getMethodVisitor(MethodVisitor forwardTo, int access, String name, String descriptor);
 
-    protected int getMinAvailableIndex()
+    protected class AvailableIndexMethodVisitor extends MethodVisitor
+    {
+        protected AvailableIndexMethodVisitor(int api, MethodVisitor methodVisitor)
+        {
+            super(api, methodVisitor);
+        }
+
+        @Override
+        public void visitVarInsn(int opcode, int varIndex)
+        {
+            if (isStoreOpcode(opcode))
+            {
+                int newAvailableVarIndex = varIndex + 1;
+                if (opcode == Opcodes.DSTORE || opcode == Opcodes.LSTORE)
+                    newAvailableVarIndex++;
+                if (newAvailableVarIndex > availableVarIndex) availableVarIndex = newAvailableVarIndex;
+            }
+            super.visitVarInsn(opcode, varIndex);
+        }
+
+        private boolean isStoreOpcode(int opcode)
+        {
+            final int[] storeOpcodes = new int[]{Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.LSTORE, Opcodes.ASTORE};
+            for (int op : storeOpcodes)
+                if (op == opcode) return true;
+            return false;
+        }
+
+    }
+
+    private int getMinAvailableIndex()
     {
         int result = 0;
         for (org.objectweb.asm.Type arg : arguments)

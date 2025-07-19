@@ -26,23 +26,8 @@ public class ReturnThrowMethodModifier extends MethodModifier
     @Override
     public MethodVisitor getMethodVisitor(MethodVisitor forwardTo, int access, String name, String descriptor)
     {
-        return new AdviceAdapter(Opcodes.ASM9, forwardTo, access, name, descriptor)
+        MethodVisitor methodVisitor = new AdviceAdapter(Opcodes.ASM9, forwardTo, access, name, descriptor)
         {
-            private int availableVarIndex = getMinAvailableIndex();
-
-            @Override
-            public void visitVarInsn(int opcode, int varIndex)
-            {
-                if (isStoreOpcode(opcode))
-                {
-                    int newAvailableVarIndex = varIndex + 1;
-                    if (opcode == Opcodes.DSTORE || opcode == Opcodes.LSTORE)
-                        newAvailableVarIndex++;
-                    if (newAvailableVarIndex > availableVarIndex) availableVarIndex = newAvailableVarIndex;
-                }
-                super.visitVarInsn(opcode, varIndex);
-            }
-
             @Override
             protected void onMethodExit(int opcode)
             {
@@ -101,14 +86,7 @@ public class ReturnThrowMethodModifier extends MethodModifier
                     mv.visitFieldInsn(Opcodes.GETFIELD, ThrowerClassName, "thrown", "");
                 }
             }
-
-            private boolean isStoreOpcode(int opcode)
-            {
-                final int[] storeOpcodes = new int[]{Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.LSTORE, Opcodes.ASTORE};
-                for (int op : storeOpcodes)
-                    if (op == opcode) return true;
-                return false;
-            }
         };
+        return this.new AvailableIndexMethodVisitor(Opcodes.ASM9, methodVisitor);
     }
 }

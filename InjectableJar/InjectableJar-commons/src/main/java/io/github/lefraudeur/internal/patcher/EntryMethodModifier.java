@@ -41,7 +41,8 @@ public class EntryMethodModifier extends MethodModifier
                 mv.visitTypeInsn(Opcodes.NEW, CancelerClassName);
                 mv.visitInsn(Opcodes.DUP);
                 mv.visitInsn(Opcodes.DUP);
-                int cancelerVarIndex = getMinAvailableIndex();
+                int cancelerVarIndex = availableVarIndex;
+                availableVarIndex++;
                 mv.visitVarInsn(Opcodes.ASTORE, cancelerVarIndex);
                 mv.visitMethodInsn(Opcodes.INVOKESPECIAL, CancelerClassName, "<init>", "()V", false);
 

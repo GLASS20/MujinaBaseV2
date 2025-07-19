@@ -5,10 +5,10 @@ import io.github.lefraudeur.internal.EventHandler;
 import io.github.lefraudeur.internal.Thrower;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityClientPlayerMP;
+import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.world.IBlockAccess;
 
-import static io.github.lefraudeur.internal.patcher.MethodModifier.Type.ON_ENTRY;
-import static io.github.lefraudeur.internal.patcher.MethodModifier.Type.ON_RETURN_THROW;
+import static io.github.lefraudeur.internal.patcher.MethodModifier.Type.*;
 
 public class TestClass
 {
@@ -51,5 +51,16 @@ public class TestClass
     public static String getClientModName(String returnValue, Thrower thrower)
     {
         return returnValue + " (Mujina Boosted)";
+    }
+
+    @EventHandler(type=ON_LDC_CONSTANT,
+            targetClass = "net/minecraft/client/renderer/EntityRenderer",
+            targetMethodName = "getMouseOver",
+            targetMethodDescriptor = "(F)V")
+    public static Object getMouseOverVar4(Object value)
+    {
+        if (value instanceof Double && (Double)value == 3.0D)
+            return 4.0D;
+        return value;
     }
 }

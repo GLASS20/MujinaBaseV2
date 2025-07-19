@@ -1,9 +1,6 @@
 package io.github.lefraudeur.internal;
 
-import io.github.lefraudeur.internal.patcher.ClassModifier;
-import io.github.lefraudeur.internal.patcher.EntryMethodModifier;
-import io.github.lefraudeur.internal.patcher.MethodModifier;
-import io.github.lefraudeur.internal.patcher.ReturnThrowMethodModifier;
+import io.github.lefraudeur.internal.patcher.*;
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.extras.MappingTreeRemapper;
 import net.fabricmc.mappingio.format.MappingFormat;
@@ -125,6 +122,9 @@ public class EventHandlerProcessor extends AbstractProcessor
                 case ON_RETURN_THROW:
                     classModifier.addModifier(new ReturnThrowMethodModifier(info));
                     break;
+                case ON_LDC_CONSTANT:
+                    classModifier.addModifier(new LDCConstantModifier(info));
+                    break;
             }
         }
     }
@@ -182,11 +182,14 @@ public class EventHandlerProcessor extends AbstractProcessor
 
     private String getExpectedDescriptor(EventHandler annotation) throws Exception
     {
-        MethodType targetMethodType = MethodType.fromMethodDescriptorString(annotation.targetMethodDescriptor(), EventHandlerProcessor.class.getClassLoader());
-        Class<?> returnType = targetMethodType.returnType();
+        if (annotation.type() == MethodModifier.Type.ON_LDC_CONSTANT)
+            return "(Ljava/lang/Object;)Ljava/lang/Object;";
 
         if (annotation.type() == MethodModifier.Type.ON_ENTRY || annotation.type() == MethodModifier.Type.ON_RETURN_THROW)
         {
+            MethodType targetMethodType = MethodType.fromMethodDescriptorString(annotation.targetMethodDescriptor(), EventHandlerProcessor.class.getClassLoader());
+            Class<?> returnType = targetMethodType.returnType();
+
             if (!annotation.targetMethodIsStatic())
                 targetMethodType = targetMethodType.insertParameterTypes(0, Class.forName(annotation.targetClass().replace('/', '.')));
 

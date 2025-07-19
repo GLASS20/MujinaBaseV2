@@ -83,6 +83,26 @@ The return type must be the same as the target method's one, the value returned 
 The first parameter must be of the same type as the target method's one, it will hold the original return value.\
 If the event was triggered because of an ATHROW instruction, then `thrower.thrown` will hold the thrown value, and you can use that field to override it.
 
+### On LDC constant load instruction
+Some constants are pushed on the stack using an LDC instruction (see JVM specification), this event handler allows you to change the value pushed on stack by an LDC instruction
+For example, this event handler will replace the constant 3.0 by 4.0 in the getMouseOver method to change the reach to 4.0.
+```JAVA
+    @EventHandler(type=ON_LDC_CONSTANT,
+            targetClass = "net/minecraft/client/renderer/EntityRenderer",
+            targetMethodName = "getMouseOver",
+            targetMethodDescriptor = "(F)V")
+    public static Object getMouseOverVar4(Object value)
+    {
+        if (value instanceof Double && (Double)value == 3.0D)
+            return 4.0D;
+        return value;
+    }
+```
+The event handler must be a public static method, it's return type must be Object, and it must have a single parameter of type Object as well. \
+value's Class and returned value's Class must be the same. \
+The returned value will replace the one normally pushed by the LDC instruction. \
+value's Class can be one of : String, Integer, Float, Double, Long, MethodType, MethodHandle, Class (dynamic constant not supported because I didn't bother reading its documentation)
+
 # Known issues
 - The classes aren't unloaded properly
 - On reinject, some modifications made to the jar might not be taken into account, because it will use the previous classes that haven't been unloaded properly. (This is likely due to the retransformed classes keeping resolved event handler method in cache, which prevent them from beeing unloaded, possible fix : use reflection, so that resolved methods aren't cached, problem : bad performance because it will have to lookup for the methods using symbolic names every time)
