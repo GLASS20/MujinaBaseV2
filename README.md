@@ -170,6 +170,12 @@ The dll needs to be aware of the Minecraft class name, so that it can get its cl
 ## What happens on inject
 Writing in progress, read the src for now
 
+ClassLoader hierarchy, from parent to child : minecraftClassLoader -> secureClassLoader -> memoryJarClassLoader
+secureClassLoader defines MemoryJarClassLoader, a memoryJarClassLoader is then instantiated and used to load other classes from InjectableJar.jar (stored in memory)
+
+The EventClassLoader is a custom ClassLoader used to allow the minecraft classes to access the classes defined by memoryJarClassLoader, the classLoader hierarchy described before isn't enough to allow that. \
+A new EventClassLoader is instantiated (let's call it eventClassLoader), eventClassLoader stores a reference to memoryJarClassLoader, eventClassLoader parent is set to minecraftClassLoader.parent and minecraftClassLoader.parent is set to eventClassLoader. 
+
 The c++ part makes use of [MetaJNI](https://github.com/Lefraudeur/MetaJNI) to make jni usage clearer.
 
 # FAQ
