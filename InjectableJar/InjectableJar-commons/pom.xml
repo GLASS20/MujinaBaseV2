@@ -16,6 +16,10 @@
   <packaging>jar</packaging>
 
   <repositories>
+    <repository>
+      <id>local_maven_repo</id>
+      <url>file://${project.basedir}/../InjectableJar/local_maven_repo</url>
+    </repository>
   </repositories>
 
   <dependencies>

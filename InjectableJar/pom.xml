@@ -19,7 +19,7 @@
     </repository>
     <repository>
       <id>local_maven_repo</id>
-      <url>file://${project.basedir}/local_maven_repo</url>
+      <url>file://${project.basedir}/InjectableJar/local_maven_repo</url>
     </repository>
     <repository>
       <id>asm</id>

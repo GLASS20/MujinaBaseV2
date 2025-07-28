@@ -13,6 +13,13 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
+    <repositories>
+        <repository>
+            <id>local_maven_repo</id>
+            <url>file://${project.basedir}/local_maven_repo</url>
+        </repository>
+    </repositories>
+
     <packaging>jar</packaging>
     <build>
         <plugins>
