@@ -1,18 +1,27 @@
 package io.github.lefraudeur;
 
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main
 {
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
+
     // warning called from c++ thread
     public static void onLoad()
     {
-        Minecraft.getMinecraft().thePlayer.sendChatMessage("hello from Mujina");
+        if (MinecraftClient.getInstance().player != null) {
+            MinecraftClient.getInstance().player.sendMessage(Text.of("Hello fron Mujina"));
+        }
     }
 
     // warning called from c++ thread
     public static void onUnload()
     {
-        Minecraft.getMinecraft().thePlayer.sendChatMessage("bye from Mujina");
+        if (MinecraftClient.getInstance().player != null) {
+            MinecraftClient.getInstance().player.sendMessage(Text.of("Bye fron Mujina"));
+        }
     }
 }

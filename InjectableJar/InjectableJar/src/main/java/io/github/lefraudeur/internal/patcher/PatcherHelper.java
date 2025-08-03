@@ -2,7 +2,7 @@ package io.github.lefraudeur.internal.patcher;
 
 import io.github.lefraudeur.internal.Canceler;
 import io.github.lefraudeur.internal.Thrower;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.MinecraftClient;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -61,7 +61,7 @@ public class PatcherHelper
     // returns null if not on lunar
     private static Set<String> getLunarClassLoaderExcludeSet()
     {
-        ClassLoader lunarClassLoader = Minecraft.class.getClassLoader();
+        ClassLoader lunarClassLoader = MinecraftClient.class.getClassLoader();
         Class<?> lunarClassLoaderClass = lunarClassLoader.getClass();
 
         for (Field field : lunarClassLoaderClass.getDeclaredFields())

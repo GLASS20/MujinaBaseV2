@@ -41,7 +41,7 @@
     <dependency>
       <groupId>minecraft.client</groupId>
       <artifactId>named</artifactId>
-      <version>1.7.10</version>
+      <version>1.20.1</version>
     </dependency>
     <dependency>
       <groupId>com.mojang</groupId>
@@ -193,9 +193,9 @@
   <properties>
     <maven.compiler.release>8</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <remapper.mappingFilePath>${project.basedir}/remapper/1.7.10.tiny</remapper.mappingFilePath>
+    <remapper.mappingFilePath>${project.basedir}/remapper/1.20.1.tiny</remapper.mappingFilePath>
     <remapper.sourceNamespace>named</remapper.sourceNamespace>
-    <remapper.destinationNamespace>searge</remapper.destinationNamespace>
+    <remapper.destinationNamespace>intermediary</remapper.destinationNamespace>
   </properties>
 
 </project>
